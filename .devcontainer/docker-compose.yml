@@ -1,0 +1,42 @@
+---
+# Python 3 with PostgreSQL
+version: "3"
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile    
+    hostname: nyu
+    container_name: nyu-project
+    volumes:
+      - ..:/app
+    command: sleep infinity
+    environment:
+      PORT: 8080
+      FLASK_APP: wsgi:app
+      FLASK_DEBUG: "True"
+      GUNICORN_BIND: "0.0.0.0:8080"
+      DATABASE_URI: postgresql+psycopg://postgres:pgs3cr3t@postgres:5432/postgres
+    networks:
+      - dev
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:15-alpine
+    # Uncomment ports to access database from your computer (optional)
+    # ports:
+    #   - 5432:5432
+    environment:
+      POSTGRES_PASSWORD: pgs3cr3t
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    networks:
+      - dev
+
+volumes:
+  postgres:
+
+networks:
+  dev:
