@@ -2,6 +2,20 @@
 Models for Shopcart
 
 All of the models are stored in this module
+
+Models
+------
+Shopcart - A Shopcart representing items a user has added for potential purchase
+
+Attributes:
+-----------
+user_id (integer) - the unique ID of the user who owns the cart
+item_id (integer) - the unique ID of the item in the cart
+description (string) - a brief description of the item
+quantity (integer) - the number of this item in the cart
+price (decimal) - the price per unit of the item
+created_at (datetime) - the timestamp when the item was added to the cart
+last_updated (datetime) - the timestamp of the most recent update to the item in the cart
 """
 
 import logging
@@ -183,7 +197,17 @@ class Shopcart(db.Model):
 
     @classmethod
     def find(cls, user_id, item_id):
-        """Finds a Shopcart entry by user_id and item_id"""
+        """Finds a Shopcart entry by user_id and item_id
+
+        :param user_id: the id of the user to find
+        :type user_id: int
+        :param item_id: the id of the item to find
+        :type item_id: int
+
+        :return: an instance with the user_id and item_id, or None if not found
+        :rtype: Shopcart
+
+        """
         logger.info(
             "Processing lookup for user_id=%s and item_id=%s ...", user_id, item_id
         )
