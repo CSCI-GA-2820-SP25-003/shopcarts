@@ -170,3 +170,40 @@ def get_user_shopcart_items(user_id):
             jsonify({"error": f"Internal server error: {str(e)}"}),
             status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
+    
+
+@app.route("/shopcarts/<int:user_id>/items/<int:item_id>", methods=["DELETE"])
+def delete_shopcart_item(user_id, item_id):
+    """
+    Delete a specific item from a user's shopping cart
+    This endpoint removes a single item from a shopping cart while preserving the cart
+    and any other items that may be in it
+    """
+    app.logger.info("Request to delete item_id: %s from user_id: %s shopping cart", item_id, user_id)
+    
+    try:
+        # Find the specific item in the user's cart
+        cart_item = Shopcart.find(user_id, item_id)
+        
+        # Check if the item exists in the cart
+        if not cart_item:
+            return (
+                jsonify({"error": f"Item with id {item_id} was not found in user {user_id}'s cart"}),
+                status.HTTP_404_NOT_FOUND
+            )
+        
+        # Delete the item from the cart
+        cart_item.delete()
+        
+        # Return the updated cart contents (which might be empty but still exists)
+        user_items = Shopcart.find_by_user_id(user_id)
+        items_list = [item.serialize() for item in user_items]
+        
+        return jsonify(items_list), status.HTTP_200_OK
+        
+    except Exception as e:
+        app.logger.error(f"Error deleting item {item_id} from user {user_id}'s cart: {str(e)}")
+        return (
+            jsonify({"error": f"Internal server error: {str(e)}"}),
+            status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
