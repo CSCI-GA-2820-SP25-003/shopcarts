@@ -242,11 +242,9 @@ def delete_shopcart_item(user_id, item_id):
                 status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-        # Return the updated cart contents (which might be empty but still exists)
-        user_items = Shopcart.find_by_user_id(user_id)
-        items_list = [item.serialize() for item in user_items]
-
-        return jsonify(items_list), status.HTTP_200_OK
+        # Return empty response with 204 NO CONTENT status
+        app.logger.info("Item with ID: %d deleted from user %d's cart", item_id, user_id)
+        return {}, status.HTTP_204_NO_CONTENT
 
     except Exception as e:
         app.logger.error(f"Error deleting item {item_id} from user {user_id}'s cart: {str(e)}")
