@@ -195,6 +195,13 @@ def delete_shopcart_item(user_id, item_id):
         # Delete the item from the cart
         cart_item.delete()
         
+        # Verify the deletion was successful
+        if Shopcart.find(user_id, item_id):
+            return (
+                jsonify({"error": f"Failed to delete item {item_id} from user {user_id}'s cart"}),
+                status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
         # Return the updated cart contents (which might be empty but still exists)
         user_items = Shopcart.find_by_user_id(user_id)
         items_list = [item.serialize() for item in user_items]
