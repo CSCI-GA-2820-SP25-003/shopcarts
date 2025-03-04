@@ -655,3 +655,67 @@ class TestShopcartService(TestCase):
             data = resp.get_json()
             self.assertIn("error", data)
             self.assertEqual(data["error"], "Internal server error: Database error")
+
+    def test_delete_shopcart_item(self):
+        """It should delete a specific item from a user's shopping cart"""
+        # Create a user with multiple items in their cart
+        shopcarts = self._populate_shopcarts(count=3, user_id=1)
+        item_to_delete = shopcarts[0]
+
+        # Delete one item
+        resp = self.client.delete(f"/shopcarts/1/items/{item_to_delete.item_id}")
+
+        # Check the response contains the updated cart
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        updated_cart = resp.get_json()
+        self.assertEqual(len(updated_cart), 2)  # One less item now
+
+        # Verify the deleted item is not in the response
+        item_ids = [item["item_id"] for item in updated_cart]
+        self.assertNotIn(item_to_delete.item_id, item_ids)
+
+    def test_delete_shopcart_item_server_error(self):
+        """It should handle server errors gracefully when deleting items"""
+        # Create some test data to make sure the database is working initially
+        shopcart = self._populate_shopcarts(count=1, user_id=1)[0]
+
+        # Mock the database find method to raise an exception with a specific message
+        with patch(
+            "service.models.Shopcart.find", 
+            side_effect=Exception("Database error")
+        ):
+            resp = self.client.delete(f"/shopcarts/1/items/{shopcart.item_id}")
+
+            # Verify the status code is 500 (Internal Server Error)
+            self.assertEqual(resp.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            # Verify the response contains an error message with the exact format
+            data = resp.get_json()
+            self.assertIn("error", data)
+            self.assertEqual(data["error"], "Internal server error: Database error")
+
+    def test_delete_nonexistent_item(self):
+        """It should return a 404 error when trying to delete an item that doesn't exist"""
+        # Create some items for a user
+        self._populate_shopcarts(count=1, user_id=1)
+
+        # Try to delete an item that doesn't exist
+        resp = self.client.delete(f"/shopcarts/1/items/99999")
+
+        # Verify response
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+        data = resp.get_json()
+        self.assertIn("error", data)
+
+    def test_delete_last_item(self):
+        """It should leave an empty cart when deleting the last item"""
+        # Create a user with only one item
+        shopcart = self._populate_shopcarts(count=1, user_id=1)[0]
+
+        # Delete the only item
+        resp = self.client.delete(f"/shopcarts/1/items/{shopcart.item_id}")
+
+        # Verify response
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.get_json()
+        self.assertEqual(len(data), 0)
