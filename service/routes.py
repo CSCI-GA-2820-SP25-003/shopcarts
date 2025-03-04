@@ -149,7 +149,7 @@ def get_user_shopcart(user_id):
         )
 
 
-@app.route("/shopcarts/<int:user_id>/items/<int:item_id>", methods=["DELETE"])
+@app.route("/shopcarts/<int:user_id>/items", methods=["GET"])
 def get_user_shopcart_items(user_id):
     """Gets all items in a specific user's shopcart"""
     app.logger.info("Request to get all items for user_id: '%s'", user_id)
