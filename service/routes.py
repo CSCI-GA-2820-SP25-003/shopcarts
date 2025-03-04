@@ -69,7 +69,7 @@ def index():
 # Todo: Place your REST API code here ...
 
 
-@app.route("/shopcart/<int:user_id>", methods=["POST"])
+@app.route("/shopcarst/<int:user_id>", methods=["POST"])
 def add_to_or_create_cart(user_id):
     """Add an item to a user's cart or update quantity if it already exists."""
     data = request.get_json()
