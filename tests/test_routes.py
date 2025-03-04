@@ -528,7 +528,7 @@ class TestShopcartService(TestCase):
 
     def test_delete_shopcart_item_server_error(self):
         """It should handle server errors gracefully when deleting items"""
-    # Create some test data to make sure the database is working initially
+        # Create some test data to make sure the database is working initially
         shopcart = self._populate_shopcarts(count=1, user_id=1)[0]
         
         # Mock the database find method to raise an exception with a specific message
