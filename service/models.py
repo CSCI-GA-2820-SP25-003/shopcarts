@@ -53,46 +53,36 @@ class Shopcart(db.Model):
 
     def validate(self):
         """Validates that the data in the Shopcarts entry meets certain requirements"""
+        # Check required fields
+        required_fields = {"user_id": self.user_id, "item_id": self.item_id}
+        for field, value in required_fields.items():
+            if value is None:
+                raise ValueError(f"{field} must not be null.")
 
-        if self.user_id is None:
-            raise ValueError("user_id must not be null.")
+        # Type validation
+        type_checks = {
+            "user_id": (self.user_id, int),
+            "item_id": (self.item_id, int),
+            "price": (self.price, (float, int, Decimal)),
+            "description": (self.description, str),
+            "quantity": (self.quantity, int),
+            "created_at": (self.created_at, (datetime, type(None))),
+            "last_updated": (self.last_updated, (datetime, type(None))),
+        }
 
-        if self.item_id is None:
-            raise ValueError("item_id must not be null.")
+        for field, (value, expected_type) in type_checks.items():
+            if not isinstance(value, expected_type):
+                raise ValueError(f"{field} must be of type {expected_type}.")
 
-        if not isinstance(self.user_id, int):
-            raise ValueError("user_id must be an integer.")
-
-        if not isinstance(self.item_id, int):
-            raise ValueError("item_id must be an integer.")
-
-        if not isinstance(self.price, (float, int, Decimal)):
-            raise ValueError("Price must be a float or integer.")
-
+        # Specific value constraints
         if self.price < 0:
-            raise ValueError("Price cannot be less than 0")
+            raise ValueError("Price cannot be less than 0.")
 
-        price_decimal = Decimal(str(self.price)).as_tuple()
-
-        if price_decimal.exponent < -2:
+        if Decimal(str(self.price)).as_tuple().exponent < -2:
             raise ValueError("Price cannot have more than 2 decimal places.")
-
-        if not isinstance(self.description, str):
-            raise ValueError("Description must be a string.")
-
-        if not isinstance(self.quantity, int):
-            raise ValueError("Quantity must be an integer.")
 
         if self.quantity <= 0:
             raise ValueError("Quantity must be greater than 0.")
-
-        if self.created_at is not None and not isinstance(self.created_at, datetime):
-            raise ValueError("created_at must be a datetime object or None.")
-
-        if self.last_updated is not None and not isinstance(
-            self.last_updated, datetime
-        ):
-            raise ValueError("last_updated must be a datetime object or None.")
 
     def __repr__(self):
         return f"<Shopcart user_id={self.user_id} item_id={self.item_id}>"
@@ -170,8 +160,6 @@ class Shopcart(db.Model):
 
             self.validate()
 
-        except AttributeError as error:
-            raise DataValidationError("Invalid attribute: " + error.args[0]) from error
         except KeyError as error:
             raise DataValidationError(
                 "Invalid Shopcarts: missing " + error.args[0]

@@ -47,3 +47,21 @@ class ShopcartFactory(factory.Factory):
         self.user_id, self.item_id = ShopcartFactory.generate_unique_user_item(
             user_id=provided_user_id
         )
+
+
+def mock_product(
+    product_id=111,
+    name="Test Product",
+    stock=10,
+    purchase_limit=None,
+    price=9.99,
+    quantity=1,
+):
+    return {
+        "product_id": product_id,
+        "name": name,
+        "stock": stock,
+        "purchase_limit": purchase_limit,
+        "price": price,
+        "quantity": quantity,
+    }

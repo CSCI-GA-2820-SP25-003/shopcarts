@@ -15,16 +15,17 @@
 ######################################################################
 
 """
-YourResourceModel Service
+Shopcarts Service
 
 This service implements a REST API that allows you to Create, Read, Update
-and Delete YourResourceModel
+and Delete Shopcarts
 """
 
-from flask import jsonify, request, url_for, abort
+from flask import jsonify, request, abort, url_for
 from flask import current_app as app  # Import Flask application
 from service.models import Shopcart
 from service.common import status  # HTTP Status Codes
+from werkzeug.exceptions import HTTPException
 
 
 ######################################################################
@@ -32,9 +33,34 @@ from service.common import status  # HTTP Status Codes
 ######################################################################
 @app.route("/")
 def index():
-    """Root URL response"""
+    """Root URL response with API metadata"""
+    app.logger.info("Request for Root URL")
+
     return (
-        "Reminder: return some useful information in json format about the service here",
+        jsonify(
+            name="Shopcart REST API Service",
+            version="1.0",
+            paths={
+                "/shopcarts": {
+                    "GET": "Lists all shopcarts grouped by user",
+                },
+                "/shopcarts/{user_id}": {
+                    "POST": "Adds an item to a user's shopcart or updates quantity if it already exists",
+                    "GET": "Retrieves the shopcart with metadata",
+                    "PUT": "Updates the entire shopcart",
+                    "DELETE": "Deletes the entire shopcart (all items)",
+                },
+                "/shopcarts/{user_id}/items": {
+                    "POST": "Adds a product to a user's shopcart or updates quantity",
+                    "GET": "Lists all items in the user's shopcart (without metadata)",
+                },
+                "/shopcarts/{user_id}/items/{item_id}": {
+                    "GET": "Retrieves a specific item from the user's shopcart",
+                    "PUT": "Updates a specific item in the shopcart",
+                    "DELETE": "Removes an item from the shopcart",
+                },
+            },
+        ),
         status.HTTP_200_OK,
     )
 
@@ -46,7 +72,7 @@ def index():
 # Todo: Place your REST API code here ...
 
 
-@app.route("/shopcart/<int:user_id>", methods=["POST"])
+@app.route("/shopcarts/<int:user_id>", methods=["POST"])
 def add_to_or_create_cart(user_id):
     """Add an item to a user's cart or update quantity if it already exists."""
     data = request.get_json()
@@ -69,7 +95,10 @@ def add_to_or_create_cart(user_id):
         try:
             cart_item.update()
         except Exception as e:
-            return jsonify({"error": str(e)}), status.HTTP_400_BAD_REQUEST
+            return (
+                jsonify({"error": f"Internal server error: {str(e)}"}),
+                status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
     else:
         # Create a new cart entry
         new_item = Shopcart(
@@ -82,11 +111,15 @@ def add_to_or_create_cart(user_id):
         try:
             new_item.create()
         except Exception as e:
-            return jsonify({"error": str(e)}), status.HTTP_400_BAD_REQUEST
+            return (
+                jsonify({"error": f"Internal server error: {str(e)}"}),
+                status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     # Return the updated cart for the user
+    location_url = url_for("get_user_shopcart", user_id=user_id, _external=True)
     cart = [item.serialize() for item in Shopcart.find_by_user_id(user_id)]
-    return jsonify(cart), status.HTTP_200_OK
+    return jsonify(cart), status.HTTP_201_CREATED, {"Location": location_url}
 
 
 @app.route("/shopcarts", methods=["GET"])
@@ -130,17 +163,18 @@ def get_user_shopcart(user_id):
     try:
 
         user_items = Shopcart.find_by_user_id(user_id=user_id)
-        for i in user_items:
-            print(i.serialize())
 
         if not user_items:
-            return jsonify([]), status.HTTP_404_NOT_FOUND
+            return abort(
+                status.HTTP_404_NOT_FOUND, f"User with id '{user_id}' was not found."
+            )
 
         user_list = [{"user_id": user_id, "items": []}]
         for item in user_items:
             user_list[0]["items"].append(item.serialize())
         return jsonify(user_list), status.HTTP_200_OK
-
+    except HTTPException as e:
+        raise e
     except Exception as e:
         app.logger.error(f"Error reading shopcart for user_id: '{user_id}'")
         return (
@@ -158,59 +192,22 @@ def get_user_shopcart_items(user_id):
         user_items = Shopcart.find_by_user_id(user_id=user_id)
 
         if not user_items:
-            return jsonify([]), status.HTTP_404_NOT_FOUND
-
+            return abort(
+                status.HTTP_404_NOT_FOUND, f"User with id '{user_id}' was not found."
+            )
         # Just return the serialized items directly as a list
-        items_list = [item.serialize() for item in user_items]
+        items_list = [{"user_id": user_id, "items": []}]
+        for item in user_items:
+            data = item.serialize()
+            del data["created_at"]
+            del data["last_updated"]
+            items_list[0]["items"].append(data)
         return jsonify(items_list), status.HTTP_200_OK
-
+    except HTTPException as e:
+        raise e
     except Exception as e:
         app.logger.error(f"Error reading items for user_id: '{user_id}'")
         return (
             jsonify({"error": f"Internal server error: {str(e)}"}),
             status.HTTP_500_INTERNAL_SERVER_ERROR,
-        )
-    
-
-@app.route("/shopcarts/<int:user_id>/items/<int:item_id>", methods=["DELETE"])
-def delete_shopcart_item(user_id, item_id):
-    """
-    Delete a specific item from a user's shopping cart
-    This endpoint removes a single item from a shopping cart while preserving the cart
-    and any other items that may be in it
-    """
-    app.logger.info("Request to delete item_id: %s from user_id: %s shopping cart", item_id, user_id)
-    
-    try:
-        # Find the specific item in the user's cart
-        cart_item = Shopcart.find(user_id, item_id)
-        
-        # Check if the item exists in the cart
-        if not cart_item:
-            return (
-                jsonify({"error": f"Item with id {item_id} was not found in user {user_id}'s cart"}),
-                status.HTTP_404_NOT_FOUND
-            )
-        
-        # Delete the item from the cart
-        cart_item.delete()
-        
-        # Verify the deletion was successful
-        if Shopcart.find(user_id, item_id):
-            return (
-                jsonify({"error": f"Failed to delete item {item_id} from user {user_id}'s cart"}),
-                status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-        
-        # Return the updated cart contents (which might be empty but still exists)
-        user_items = Shopcart.find_by_user_id(user_id)
-        items_list = [item.serialize() for item in user_items]
-        
-        return jsonify(items_list), status.HTTP_200_OK
-        
-    except Exception as e:
-        app.logger.error(f"Error deleting item {item_id} from user {user_id}'s cart: {str(e)}")
-        return (
-            jsonify({"error": f"Internal server error: {str(e)}"}),
-            status.HTTP_500_INTERNAL_SERVER_ERROR
         )
