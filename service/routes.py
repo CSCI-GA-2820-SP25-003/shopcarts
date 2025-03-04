@@ -25,6 +25,8 @@ from flask import jsonify, request
 from flask import current_app as app  # Import Flask application
 from service.models import Shopcart
 from service.common import status  # HTTP Status Codes
+
+
 ######################################################################
 # GET INDEX
 ######################################################################
@@ -169,34 +171,59 @@ def get_user_shopcart_items(user_id):
             status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
+
 @app.route("/shopcarts/<int:user_id>/items", methods=["POST"])
 def add_product_to_cart(user_id):
     """
     Add a product to a user's shopping cart or update quantity if it already exists.
-    Product data (name, price, stock, purchase_limit, etc.) is taken from the request body,
+    Product data (name, price, stock, purchase_limit, etc.) is taken from the request body.
     """
     data = request.get_json()
     if not data:
         return jsonify({"error": "Missing JSON payload"}), status.HTTP_400_BAD_REQUEST
 
     try:
-        product_id = int(data["product_id"])
-        quantity = int(data.get("quantity", 1))
-        name = str(data.get("name", ""))
-        price = float(data.get("price", 0.0))
-
-        stock = data.get("stock")
-        purchase_limit = data.get("purchase_limit")
-
-        if stock is not None:
-            stock = int(stock)
-        if purchase_limit is not None:
-            purchase_limit = int(purchase_limit)
-    except (KeyError, ValueError, TypeError) as e:
+        product_info = extract_product_info(data)
+    except ValueError as e:
         return jsonify({"error": f"Invalid input: {e}"}), status.HTTP_400_BAD_REQUEST
 
+    error_response = validate_product_constraints(product_info)
+    if error_response:
+        return error_response
+
+    return process_cart_update(user_id, product_info)
+
+
+def extract_product_info(data):
+    """Extracts and validates product-related data from request."""
+    try:
+        return {
+            "product_id": int(data["product_id"]),
+            "quantity": int(data.get("quantity", 1)),
+            "name": str(data.get("name", "")),
+            "price": float(data.get("price", 0.0)),
+            "stock": int(data["stock"]) if "stock" in data else None,
+            "purchase_limit": (
+                int(data["purchase_limit"]) if "purchase_limit" in data else None
+            ),
+        }
+    except (KeyError, ValueError, TypeError) as e:
+        raise ValueError(e)
+
+
+def validate_product_constraints(product_info):
+    """Validates stock and purchase limit constraints before adding to cart."""
+    stock, purchase_limit, quantity = (
+        product_info["stock"],
+        product_info["purchase_limit"],
+        product_info["quantity"],
+    )
+
     if stock is not None and stock < 1:
-        return jsonify({"error": "Product is out of stock"}), status.HTTP_400_BAD_REQUEST
+        return (
+            jsonify({"error": "Product is out of stock"}),
+            status.HTTP_400_BAD_REQUEST,
+        )
 
     if stock is not None and quantity > stock:
         return (
@@ -210,41 +237,66 @@ def add_product_to_cart(user_id):
             status.HTTP_400_BAD_REQUEST,
         )
 
-    # Look for an existing cart item (composite key: user_id & product_id)
+    return None  # No validation errors
+
+
+def process_cart_update(user_id, product_info):
+    """Handles adding/updating product in the shopping cart."""
+    product_id, quantity = product_info["product_id"], product_info["quantity"]
+    stock, purchase_limit = product_info["stock"], product_info["purchase_limit"]
+
     cart_item = Shopcart.find(user_id, product_id)
+
     if cart_item:
-        new_quantity = cart_item.quantity + quantity
-
-        if stock is not None and new_quantity > stock:
-            return (
-                jsonify({"error": f"Cannot exceed {stock} units in stock"}),
-                status.HTTP_400_BAD_REQUEST,
-            )
-        if purchase_limit is not None and new_quantity > purchase_limit:
-            return (
-                jsonify({"error": f"Cannot exceed purchase limit of {purchase_limit}"}),
-                status.HTTP_400_BAD_REQUEST,
-            )
-
-        cart_item.quantity = new_quantity
-        try:
-            cart_item.update()
-        except Exception as e:
-            app.logger.error("Error updating cart item: %s", e)
-            return jsonify({"error": str(e)}), status.HTTP_400_BAD_REQUEST
+        return update_existing_cart_item(cart_item, quantity, stock, purchase_limit)
     else:
-        new_item = Shopcart(
-            user_id=user_id,
-            item_id=product_id,
-            description=name,
-            quantity=quantity,
-            price=price,
-        )
-        try:
-            new_item.create()
-        except Exception as e:
-            app.logger.error("Error creating cart item: %s", e)
-            return jsonify({"error": str(e)}), status.HTTP_400_BAD_REQUEST
+        return create_new_cart_item(user_id, product_info)
 
+
+def update_existing_cart_item(cart_item, quantity, stock, purchase_limit):
+    """Updates an existing cart item while checking stock and purchase limits."""
+    new_quantity = cart_item.quantity + quantity
+
+    if stock is not None and new_quantity > stock:
+        return (
+            jsonify({"error": f"Cannot exceed {stock} units in stock"}),
+            status.HTTP_400_BAD_REQUEST,
+        )
+    if purchase_limit is not None and new_quantity > purchase_limit:
+        return (
+            jsonify({"error": f"Cannot exceed purchase limit of {purchase_limit}"}),
+            status.HTTP_400_BAD_REQUEST,
+        )
+
+    cart_item.quantity = new_quantity
+    try:
+        cart_item.update()
+    except Exception as e:
+        app.logger.error("Error updating cart item: %s", e)
+        return jsonify({"error": str(e)}), status.HTTP_400_BAD_REQUEST
+
+    return get_cart_response(cart_item.user_id)
+
+
+def create_new_cart_item(user_id, product_info):
+    """Creates a new cart item."""
+    new_item = Shopcart(
+        user_id=user_id,
+        item_id=product_info["product_id"],
+        description=product_info["name"],
+        quantity=product_info["quantity"],
+        price=product_info["price"],
+    )
+    try:
+        new_item.create()
+    except Exception as e:
+        app.logger.error("Error creating cart item: %s", e)
+        return jsonify({"error": str(e)}), status.HTTP_400_BAD_REQUEST
+
+    return get_cart_response(user_id)
+
+
+def get_cart_response(user_id):
+    """Fetches updated cart and returns serialized data."""
     cart_items = Shopcart.find_by_user_id(user_id)
     return jsonify([item.serialize() for item in cart_items]), status.HTTP_200_OK
