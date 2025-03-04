@@ -21,10 +21,11 @@ This service implements a REST API that allows you to Create, Read, Update
 and Delete YourResourceModel
 """
 
-from flask import jsonify, request
+from flask import jsonify, request, abort  # url_for removed
 from flask import current_app as app  # Import Flask application
 from service.models import Shopcart
 from service.common import status  # HTTP Status Codes
+from werkzeug.exceptions import HTTPException
 
 
 ######################################################################
@@ -32,9 +33,31 @@ from service.common import status  # HTTP Status Codes
 ######################################################################
 @app.route("/")
 def index():
-    """Root URL response"""
+    """Root URL response with API metadata"""
+    app.logger.info("Request for Root URL")
+
     return (
-        "Reminder: return some useful information in json format about the service here",
+        jsonify(
+            name="Shopcart REST API Service",
+            version="1.0",
+            paths={
+                "/shopcarts": {"POST": "Creates a new shopcart"},
+                "/shopcarts/{user_id}/items": {
+                    "POST": "Adds a product to the shopcart",
+                    "GET": "Lists all items in the shopcart (without metadata)",
+                },
+                "/shopcarts/{user_id}": {
+                    "GET": "Retrieves the shopcart with metadata",
+                    "PUT": "Updates the entire shopcart",
+                    "DELETE": "Deletes the whole shopcart (all items)",
+                },
+                "/shopcarts/{user_id}/items/{item_id}": {
+                    "GET": "Retrieves a specific item from the shopcart",
+                    "PUT": "Updates a specific item in the shopcart",
+                    "DELETE": "Removes an item from the shopcart",
+                },
+            },
+        ),
         status.HTTP_200_OK,
     )
 
@@ -69,7 +92,10 @@ def add_to_or_create_cart(user_id):
         try:
             cart_item.update()
         except Exception as e:
-            return jsonify({"error": str(e)}), status.HTTP_400_BAD_REQUEST
+            return (
+                jsonify({"error": f"Internal server error: {str(e)}"}),
+                status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
     else:
         # Create a new cart entry
         new_item = Shopcart(
@@ -82,11 +108,14 @@ def add_to_or_create_cart(user_id):
         try:
             new_item.create()
         except Exception as e:
-            return jsonify({"error": str(e)}), status.HTTP_400_BAD_REQUEST
+            return (
+                jsonify({"error": f"Internal server error: {str(e)}"}),
+                status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     # Return the updated cart for the user
     cart = [item.serialize() for item in Shopcart.find_by_user_id(user_id)]
-    return jsonify(cart), status.HTTP_200_OK
+    return jsonify(cart), status.HTTP_201_CREATED
 
 
 @app.route("/shopcarts", methods=["GET"])
@@ -134,13 +163,16 @@ def get_user_shopcart(user_id):
             print(i.serialize())
 
         if not user_items:
-            return jsonify([]), status.HTTP_404_NOT_FOUND
+            return abort(
+                status.HTTP_404_NOT_FOUND, f"User with id '{user_id}' was not found."
+            )
 
         user_list = [{"user_id": user_id, "items": []}]
         for item in user_items:
             user_list[0]["items"].append(item.serialize())
         return jsonify(user_list), status.HTTP_200_OK
-
+    except HTTPException as e:
+        raise e
     except Exception as e:
         app.logger.error(f"Error reading shopcart for user_id: '{user_id}'")
         return (
@@ -156,14 +188,21 @@ def get_user_shopcart_items(user_id):
 
     try:
         user_items = Shopcart.find_by_user_id(user_id=user_id)
-
+        print(user_items)
         if not user_items:
-            return jsonify([]), status.HTTP_404_NOT_FOUND
-
+            return abort(
+                status.HTTP_404_NOT_FOUND, f"User with id '{user_id}' was not found."
+            )
         # Just return the serialized items directly as a list
-        items_list = [item.serialize() for item in user_items]
+        items_list = [{"user_id": user_id, "items": []}]
+        for item in user_items:
+            data = item.serialize()
+            del data["created_at"]
+            del data["last_updated"]
+            items_list[0]["items"].append(data)
         return jsonify(items_list), status.HTTP_200_OK
-
+    except HTTPException as e:
+        raise e
     except Exception as e:
         app.logger.error(f"Error reading items for user_id: '{user_id}'")
         return (
@@ -299,4 +338,136 @@ def create_new_cart_item(user_id, product_info):
 def get_cart_response(user_id):
     """Fetches updated cart and returns serialized data."""
     cart_items = Shopcart.find_by_user_id(user_id)
-    return jsonify([item.serialize() for item in cart_items]), status.HTTP_200_OK
+    return jsonify([item.serialize() for item in cart_items]), status.HTTP_201_CREATED
+
+
+@app.route("/shopcart/<int:user_id>/items/<int:item_id>", methods=["PUT"])
+def update_cart_item(user_id, item_id):
+    """Update a specific item in a user's shopping cart."""
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Missing JSON payload"}), status.HTTP_400_BAD_REQUEST
+
+    quantity = int(data.get("quantity"))
+    if quantity < 0:
+        return (
+            jsonify({"error": "Quantity cannot be negative"}),
+            status.HTTP_400_BAD_REQUEST,
+        )
+
+    cart_item = Shopcart.find(user_id, item_id)
+    if not cart_item:
+        return (
+            jsonify({"error": f"Item {item_id} not found in user {user_id}'s cart"}),
+            status.HTTP_404_NOT_FOUND,
+        )
+
+    if quantity == 0:
+        cart_item.delete()
+        return (
+            jsonify({"message": f"Item {item_id} removed from cart"}),
+            status.HTTP_200_OK,
+        )
+
+    cart_item.quantity = quantity
+    cart_item.update()
+    return jsonify(cart_item.serialize()), status.HTTP_200_OK
+
+
+@app.route("/shopcarts/<int:user_id>", methods=["PUT"])
+def update_shopcart(user_id):
+    """Update an existing shopcart."""
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Missing JSON payload"}), status.HTTP_400_BAD_REQUEST
+
+    # Items expected in payload
+    items = data.get("items")
+    if not items or not isinstance(items, list):
+        return (
+            jsonify({"error": "Invalid payload: 'items' must be a list"}),
+            status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Ensuring the shopcart exists
+    user_items = Shopcart.find_by_user_id(user_id)
+    if not user_items:
+        return (
+            jsonify({"error": f"Shopcart for user {user_id} not found"}),
+            status.HTTP_404_NOT_FOUND,
+        )
+
+    for update_item in items:
+        try:
+            item_id = int(update_item["item_id"])
+            quantity = int(update_item["quantity"])
+        except (KeyError, ValueError, TypeError) as e:
+            return (
+                jsonify({"error": f"Invalid input: {e}"}),
+                status.HTTP_400_BAD_REQUEST,
+            )
+
+        if quantity < 0:
+            return (
+                jsonify({"error": "Quantity cannot be negative"}),
+                status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Finding the item
+        cart_item = Shopcart.find(user_id, item_id)
+        if cart_item:
+            if quantity == 0:
+                # Remove the item if quantity is 0
+                try:
+                    cart_item.delete()
+                except Exception as e:
+                    return jsonify({"error": str(e)}), status.HTTP_400_BAD_REQUEST
+            else:
+                # Update the item's quantity
+                cart_item.quantity = quantity
+                try:
+                    cart_item.update()
+                except Exception as e:
+                    return jsonify({"error": str(e)}), status.HTTP_400_BAD_REQUEST
+        else:
+            pass
+
+    # Return the updated cart for the user
+    cart = [item.serialize() for item in Shopcart.find_by_user_id(user_id)]
+    return jsonify(cart), status.HTTP_200_OK
+
+
+@app.route("/shopcarts/<int:user_id>/items/<int:item_id>", methods=["GET"])
+def get_cart_item(user_id, item_id):
+    """Gets a specific item from a user's shopcart"""
+    app.logger.info("Request to get item %s for user_id: %s", item_id, user_id)
+
+    try:
+        # First check if the user exists by trying to get any items for this user
+        user_items = Shopcart.find_by_user_id(user_id=user_id)
+        if not user_items:
+            return abort(
+                status.HTTP_404_NOT_FOUND, f"User with id '{user_id}' was not found."
+            )
+
+        # Now try to find the specific item
+        cart_item = Shopcart.find(user_id, item_id)
+        if not cart_item:
+            return (
+                jsonify(
+                    {"error": f"Item {item_id} not found in user {user_id}'s cart"}
+                ),
+                status.HTTP_404_NOT_FOUND,
+            )
+
+        # Return the serialized item
+        return jsonify(cart_item.serialize()), status.HTTP_200_OK
+
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        app.logger.error(f"Error retrieving item {item_id} for user_id: '{user_id}'")
+        return (
+            jsonify({"error": f"Internal server error: {str(e)}"}),
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
