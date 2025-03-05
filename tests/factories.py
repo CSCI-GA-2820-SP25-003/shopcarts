@@ -52,6 +52,7 @@ class ShopcartFactory(factory.Factory):
 def mock_product(
     product_id=111,
     name="Test Product",
+    description="Product Description Here",
     stock=10,
     purchase_limit=None,
     price=9.99,
@@ -60,6 +61,7 @@ def mock_product(
     return {
         "product_id": product_id,
         "name": name,
+        "description": description,
         "stock": stock,
         "purchase_limit": purchase_limit,
         "price": price,

@@ -240,6 +240,7 @@ def extract_product_info(data):
             "product_id": int(data["product_id"]),
             "quantity": int(data.get("quantity", 1)),
             "name": str(data.get("name", "")),
+            "description": str(data.get("description", "")),
             "price": float(data.get("price", 0.0)),
             "stock": int(data["stock"]) if "stock" in data else None,
             "purchase_limit": (
@@ -322,7 +323,8 @@ def create_new_cart_item(user_id, product_info):
     new_item = Shopcart(
         user_id=user_id,
         item_id=product_info["product_id"],
-        description=product_info["name"],
+        name=product_info["name"],
+        description=product_info["description"],
         quantity=product_info["quantity"],
         price=product_info["price"],
     )
