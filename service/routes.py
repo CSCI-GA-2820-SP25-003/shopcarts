@@ -324,37 +324,86 @@ def add_product_to_cart(user_id):
     )
 
 
-@app.route("/shopcarts/<int:user_id>/items/<int:item_id>", methods=["PUT"])
-def update_cart_item(user_id, item_id):
-    """Update a specific item in a user's shopping cart."""
-    data = request.get_json()
+def validate_item_payload(data):
+    """Validate the JSON payload for updating an item."""
     if not data:
-        return jsonify({"error": "Missing JSON payload"}), status.HTTP_400_BAD_REQUEST
+        raise ValueError("Missing JSON payload")
 
-    quantity = int(data.get("quantity"))
+    if "quantity" not in data:
+        raise ValueError("Missing 'quantity' field")
+
+    # Validate quantity
+    try:
+        quantity = int(data["quantity"])
+    except (ValueError, TypeError):
+        raise ValueError("Quantity must be an integer")
+
     if quantity < 0:
-        return (
-            jsonify({"error": "Quantity cannot be negative"}),
-            status.HTTP_400_BAD_REQUEST,
-        )
+        raise ValueError("Quantity cannot be negative")
 
+    price = None
+    if "price" in data:
+        try:
+            price = float(data["price"])
+        except (ValueError, TypeError):
+            raise ValueError("Price must be a numeric value")
+
+    description = None
+    if "description" in data:
+        description = str(data["description"])
+
+    return quantity, price, description
+
+
+def process_item_update(user_id, item_id, quantity, price=None, description=None):
+    """Update or remove a cart item based on the given quantity, price, and description."""
     cart_item = Shopcart.find(user_id, item_id)
     if not cart_item:
-        return (
-            jsonify({"error": f"Item {item_id} not found in user {user_id}'s cart"}),
-            status.HTTP_404_NOT_FOUND,
-        )
+        raise LookupError(f"Item {item_id} not found in user {user_id}'s cart")
 
     if quantity == 0:
         cart_item.delete()
-        return (
-            jsonify({"message": f"Item {item_id} removed from cart"}),
-            status.HTTP_200_OK,
-        )
+        return None
 
+    # Update the item's fields
     cart_item.quantity = quantity
+    if price is not None:
+        cart_item.price = price
+    if description is not None:
+        cart_item.description = description
+
     cart_item.update()
-    return jsonify(cart_item.serialize()), status.HTTP_200_OK
+    return cart_item
+
+
+@app.route("/shopcarts/<int:user_id>/items/<int:item_id>", methods=["PUT"])
+def update_cart_item(user_id, item_id):
+    """Update a specific item in a user's shopping cart (quantity, price, description)."""
+    try:
+        data = request.get_json()
+        quantity, price, description = validate_item_payload(data)
+        cart_item = process_item_update(user_id, item_id, quantity, price, description)
+
+        # If cart_item is None, the item was removed
+        if cart_item is None:
+            return (
+                jsonify({"message": f"Item {item_id} removed from cart"}),
+                status.HTTP_200_OK,
+            )
+        return jsonify(cart_item.serialize()), status.HTTP_200_OK
+
+    except LookupError as e:
+        # Item not found in the user's cart
+        return jsonify({"error": str(e)}), status.HTTP_404_NOT_FOUND
+
+    except ValueError as e:
+        return jsonify({"error": str(e)}), status.HTTP_400_BAD_REQUEST
+
+    except Exception as e:
+        return (
+            jsonify({"error": f"Internal server error: {str(e)}"}),
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
 
 
 def validate_items_list(data):
@@ -368,58 +417,86 @@ def validate_items_list(data):
 def process_cart_updates(user_id, items):
     """Update or remove items in the user's shopping cart."""
     for item in items:
+        # Parse and validate item_id and quantity
         try:
             item_id = int(item["item_id"])
             quantity = int(item["quantity"])
         except (KeyError, ValueError, TypeError) as e:
-            raise ValueError(f"Invalid input: {e}")
+            raise ValueError(f"Invalid input: {e}") from e
 
         if quantity < 0:
             raise ValueError("Quantity cannot be negative")
 
-        update_cart_item_helper(user_id, item_id, quantity)
+        # Parse optional price
+        price = None
+        if "price" in item:
+            try:
+                price = float(item["price"])
+            except (ValueError, TypeError) as e:
+                raise ValueError("Price must be a numeric value") from e
+
+        description = None
+        if "description" in item:
+            description = str(item["description"])
+
+        result = update_cart_item_helper(user_id, item_id, quantity, price, description)
+
+        if isinstance(result, tuple):
+            error_msg, status_code = result
+            raise ValueError(error_msg.get_json()["error"])
 
 
-def update_cart_item_helper(user_id, item_id, quantity):
-    """Update or remove a cart item based on the given quantity."""
+def update_cart_item_helper(user_id, item_id, quantity, price=None, description=None):
+    """Update or remove a cart item based on the given quantity, price, and description."""
     cart_item = Shopcart.find(user_id, item_id)
+    if not cart_item:
+        # Return a tuple indicating a 404 response
+        return (
+            jsonify({"error": f"Item {item_id} not found in user {user_id}'s cart"}),
+            status.HTTP_404_NOT_FOUND,
+        )
 
-    if cart_item:
-        if quantity == 0:
-            cart_item.delete()
-        else:
-            cart_item.quantity = quantity
-            cart_item.update()
+    if quantity == 0:
+        cart_item.delete()
+    else:
+        cart_item.quantity = quantity
+
+        if price is not None:
+            cart_item.price = price
+        if description is not None:
+            cart_item.description = description
+
+        cart_item.update()
+
+    return None
 
 
 @app.route("/shopcarts/<int:user_id>", methods=["PUT"])
 def update_shopcart(user_id):
-    """Update an existing shopcart."""
+    """Update an existing shopcart with quantity, price, and description."""
     data = request.get_json()
     if not data:
         return jsonify({"error": "Missing JSON payload"}), status.HTTP_400_BAD_REQUEST
 
-    # Validate items list
     try:
         items = validate_items_list(data)
     except ValueError as e:
         return jsonify({"error": str(e)}), status.HTTP_400_BAD_REQUEST
 
-    # Ensure the shopcart exists
     if not Shopcart.find_by_user_id(user_id):
         return (
             jsonify({"error": f"Shopcart for user {user_id} not found"}),
             status.HTTP_404_NOT_FOUND,
         )
 
-    # Process cart updates
     try:
         process_cart_updates(user_id, items)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), status.HTTP_400_BAD_REQUEST
     except Exception as e:
         app.logger.error("Cart update error: %s", e)
         return jsonify({"error": str(e)}), status.HTTP_400_BAD_REQUEST
 
-    # Return updated cart
     updated_cart = [item.serialize() for item in Shopcart.find_by_user_id(user_id)]
     return jsonify(updated_cart), status.HTTP_200_OK
 
