@@ -606,5 +606,3 @@ class TestYourResourceModel(TestCase):
         self.assertEqual(len(found), count)
         for shopcart in found:
             self.assertEqual(shopcart.last_updated, last_updated)
-
-    # Todo: Add your test cases here...

@@ -3,13 +3,9 @@
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Python](https://img.shields.io/badge/Language-Python-blue.svg)](https://python.org/)
 
-This is a skeleton you can use to start your projects.
-
-**Note:** _Feel free to overwrite this `README.md` file with the one that describes your project._
-
 ## Overview
 
-This project template contains starter code for your class project. The `/service` folder contains your `models.py` file for your model and a `routes.py` file for your service. The `/tests` folder has test case starter code for testing the model and the service separately. All you need to do is add your functionality. You can use the [lab-flask-tdd](https://github.com/nyu-devops/lab-flask-tdd) for code examples to copy from.
+The `/service` folder contains `models.py` file for the model and a `routes.py` file for the service. The `/tests` folder has test cases for testing the model and the service separately. You can use the [lab-flask-tdd](https://github.com/nyu-devops/lab-flask-tdd) for code examples to copy from.
 
 ## Automatic Setup
 
@@ -59,6 +55,82 @@ tests/                     - test cases package
 ├── test_models.py         - test suite for business models
 └── test_routes.py         - test suite for service routes
 ```
+
+## Shopcart Model Overview
+
+This service provides an API for managing shopping carts. Developers can easily set up and run the project using **DevContainer** in **VS Code** with Docker.
+
+## Setup Instructions
+
+### Prerequisites
+- Install **Docker**
+- Install **VS Code** with the **DevContainers extension**
+
+### Running the Project
+1. Clone the repository:
+   ```sh
+   git clone <repo-url>
+   cd <repo-folder>
+2. Open the project in VS Code.
+3. When prompted, reopen in a DevContainer.
+4. Once the container starts, the service will be ready to use.
+
+## API Documentation
+
+### Routes
+
+#### Shopcarts
+- `GET /shopcarts` - Lists all shopcarts grouped by user.
+
+#### Shopcart operations
+
+- `POST /shopcarts/{user_id}` - Adds an item to a user's shopcart or updates quantity if it already exists.
+- `GET /shopcarts/{user_id}` - Retrieves the shopcart with metadata.
+- `PUT /shopcarts/{user_id}` - Updates the entire shopcart.
+- `DELETE /shopcarts/{user_id}` - Deletes the entire shopcart (all items).
+
+#### ShopCart Items
+
+- `POST /shopcarts/{user_id}/items` - Adds a product to a user's shopcart or updates quantity.
+- `GET /shopcarts/{user_id}/items` - Lists all items in the user's shopcart (without metadata).
+
+#### Specific Shopcart Item
+
+- `GET /shopcarts/{user_id}/items/{item_id}` - Retrieves a specific item from the user's shopcart.
+- `PUT /shopcarts/{user_id}/items/{item_id}` - Updates a specific item in the shopcart.
+- `DELETE /shopcarts/{user_id}/items/{item_id}` - Removes an item from the shopcart.
+
+#### Usage Examples
+
+You can interact with the API using Postman, curl, or any similar tool.
+
+- To **retrieve** a shopcart for a user with `user_id = 5` (with metadata):
+
+```GET http://localhost:8080/shopcarts/5```
+
+- To **list** all items in a user's shopcart:
+
+```GET http://localhost:8080/shopcarts/5/items```
+
+- To **add an item** to a user's shopcart, send a `POST` request with `JSON` data:
+ 
+```POST http://localhost:8080/shopcarts/5```
+
+```
+json={
+  "item_id": "123",
+  "quantity": 2,
+  "price": 9.99
+}
+```
+
+- To **update** a specific item in the shopcart:
+
+```PUT http://localhost:8080/shopcarts/5/items/123```
+
+- To **delete** an item from the shopcart:
+
+```DELETE http://localhost:8080/shopcarts/5/items/123```
 
 ## License
 
