@@ -74,6 +74,16 @@ class TestShopcartGet(TestShopcartService):
         self.assertIn("paths", data)
         self.assertEqual(data["paths"], expected_paths)
 
+    def test_health_endpoint(self):
+        """It should return health status"""
+        response = self.client.get("/health")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        data = response.get_json()
+        self.assertIsNotNone(data)
+        self.assertIn("status", data)
+        self.assertEqual(data["status"], "OK")
+
     def test_list_shopcarts(self):
         """It should list all shopcarts in the database"""
         # Create test data

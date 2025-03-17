@@ -133,6 +133,56 @@ json={
 
 ```DELETE http://localhost:8080/shopcarts/5/items/123```
 
+
+## Kubernetes local development commands
+
+Cluster initialization
+```
+make cluster
+```
+
+Build and tag
+```
+docker build -t shopcarts:1.0 .
+docker tag shopcarts:1.0 cluster-registry:6000/shopcarts:1.0
+
+## If the docker push does not work add the following command
+sudo bash -c "echo '127.0.0.1    cluster-registry' >> /etc/hosts"
+
+docker push cluster-registry:6000/shopcarts:1.0
+```
+
+Create namespace
+```
+kubectl create namespace dev
+kns dev
+```
+
+Kubernetes Commands
+```
+kubectl apply -f k8s/pv.yaml
+
+kubectl apply -f k8s/postgres/secret.yaml
+kubectl apply -f k8s/postgres/stateful-set.yaml
+kubectl apply -f k8s/postgres/pvc.yaml
+kubectl apply -f k8s/postgres/service.yaml
+
+kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/service.yaml
+kubectl apply -f k8s/ingress.yaml
+
+kubectl get all
+kubectl get pods
+
+## At this point, the service is running and can be accessed using the ingress at localhost:8080
+## It takes a while to show in the kubectl get pods command but it is running
+
+kubectl delete -f k8s/postgres/
+kubectl delete -f k8s/
+
+make cluster-rm
+```
+
 ## License
 
 Copyright (c) 2016, 2025 [John Rofrano](https://www.linkedin.com/in/JohnRofrano/). All rights reserved.
