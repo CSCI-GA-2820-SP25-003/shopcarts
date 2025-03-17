@@ -2,13 +2,33 @@
 GET Controller logic for Shopcart Service
 """
 
+from datetime import datetime, timedelta
+from sqlalchemy import and_, or_
 from werkzeug.exceptions import HTTPException
 from flask import jsonify, abort, request
 from flask import current_app as app
 from service.models import Shopcart
 from service.common import status
-from sqlalchemy import and_, or_
-from datetime import datetime, timedelta
+
+RANGE_OPERATORS = {"lt": "<", "lte": "<=", "gt": ">", "gte": ">="}
+
+VALID_FIELDS = {
+    "user_id": (Shopcart.user_id, int),
+    "item_id": (Shopcart.item_id, int),
+    "description": (Shopcart.description, str),
+    "quantity": (Shopcart.quantity, int),
+    "price": (Shopcart.price, float),
+    "created_at": (Shopcart.created_at, datetime),
+    "last_updated": (Shopcart.last_updated, datetime),
+}
+
+
+def parse_datetime(value):
+    """Convert 'YYYY-MM-DD' to a datetime object."""
+    try:
+        return datetime.strptime(value, "%Y-%m-%d")
+    except ValueError:
+        raise ValueError(f"Invalid date format: {value}. Expected YYYY-MM-DD.")
 
 
 def get_shopcarts_controller():
@@ -17,40 +37,18 @@ def get_shopcarts_controller():
 
     try:
         filters = []
-        query_params = request.args.to_dict(flat=False)  # multiple values per key
-
-        range_operators = {
-            "lt": "<",
-            "lte": "<=",
-            "gt": ">",
-            "gte": ">=",
-        }
-
-        valid_fields = {
-            "user_id": (Shopcart.user_id, int),
-            "item_id": (Shopcart.item_id, int),
-            "description": (Shopcart.description, str),
-            "quantity": (Shopcart.quantity, int),
-            "price": (Shopcart.price, float),
-            "created_at": (Shopcart.created_at, datetime),
-            "last_updated": (Shopcart.last_updated, datetime),
-        }
-
-        def parse_datetime(value):
-            """Convert 'YYYY-MM-DD' string to datetime object at midnight."""
-            try:
-                return datetime.strptime(value, "%Y-%m-%d")
-            except ValueError:
-                raise ValueError(f"Invalid date format: {value}. Expected YYYY-MM-DD.")
+        query_params = request.args.to_dict(
+            flat=False
+        )  # Allows multiple values per key
 
         for key, values in query_params.items():
-            if key in valid_fields:
-                field, cast_type = valid_fields[key]
+            if key in VALID_FIELDS:
+                field, cast_type = VALID_FIELDS[key]
                 condition_list = []
 
                 for value in values:
                     try:
-                        # range queries (e.g., created_at=~gte~2023-09-01)
+                        # **Range Filtering (e.g., created_at=~gte~2025-03-17)**
                         if "~" in value:
                             _, operator, filter_value = value.split("~")
                             filter_value = (
@@ -59,33 +57,33 @@ def get_shopcarts_controller():
                                 else cast_type(filter_value)
                             )
 
-                            # Adjust range filtering for datetime
+                            # Adjust datetime filtering to capture full days
                             if cast_type is datetime and operator in ["lt", "lte"]:
                                 filter_value += timedelta(days=1) - timedelta(seconds=1)
 
                             expr = eval(
-                                f"field {range_operators[operator]} filter_value"
+                                f"field {RANGE_OPERATORS[operator]} filter_value"
                             )
                             condition_list.append(expr)
 
-                        # Handle multiple dates for created_at using OR conditions
+                        # **Multiple Date Filtering (`created_at=YYYY-MM-DD,YYYY-MM-DD`)**
                         elif cast_type is datetime and "," in value:
                             date_conditions = []
                             for date_str in value.split(","):
                                 date_obj = parse_datetime(date_str.strip())
-                                start_date = date_obj
+                                start_date = date_obj  # `YYYY-MM-DD 00:00:00`
                                 end_date = (
                                     start_date
                                     + timedelta(days=1)
                                     - timedelta(seconds=1)
-                                )
+                                )  # `YYYY-MM-DD 23:59:59`
                                 date_conditions.append(
                                     and_(field >= start_date, field <= end_date)
                                 )
 
                             condition_list.append(or_(*date_conditions))
 
-                        # Handle exact match
+                        # **Exact Date Filtering (`created_at=YYYY-MM-DD`)**
                         elif cast_type is datetime:
                             start_date = parse_datetime(value)
                             end_date = (
@@ -95,6 +93,14 @@ def get_shopcarts_controller():
                                 and_(field >= start_date, field <= end_date)
                             )
 
+                        # **List-Based Filtering (e.g., `user_id=1,2,3`)**
+                        elif "," in value:
+                            parsed_values = [
+                                cast_type(v.strip()) for v in value.split(",")
+                            ]
+                            condition_list.append(field.in_(parsed_values))
+
+                        # **Exact Match for Other Fields (`user_id=5`)**
                         else:
                             condition_list.append(field == cast_type(value))
 
@@ -104,17 +110,20 @@ def get_shopcarts_controller():
                 if condition_list:
                     filters.append(or_(*condition_list))
 
+        # Execute query with filters
         if filters:
             filtered_items = Shopcart.query.filter(and_(*filters)).all()
         else:
             filtered_items = Shopcart.all()
 
+        # Group results by `user_id`
         user_items = {}
         for item in filtered_items:
             if item.user_id not in user_items:
                 user_items[item.user_id] = []
             user_items[item.user_id].append(item.serialize())
 
+        # Format final JSON response
         shopcarts_list = [
             {"user_id": user_id, "items": items}
             for user_id, items in user_items.items()
