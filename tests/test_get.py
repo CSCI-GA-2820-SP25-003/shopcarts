@@ -21,6 +21,7 @@ TestYourResourceModel API Service Test Suite
 
 # pylint: disable=duplicate-code
 from unittest.mock import patch
+from sqlalchemy.exc import SQLAlchemyError
 from service.common import status
 from .test_routes import TestShopcartService
 from datetime import datetime
@@ -136,19 +137,16 @@ class TestShopcartGet(TestShopcartService):
 
     def test_list_shopcarts_server_error(self):
         """It should handle server errors gracefully"""
-        # Create some test data to make sure the database is working initially
         self._populate_shopcarts(1)
-        # Mock the database query to raise an exception
+
         with patch(
-            "service.models.Shopcart.all", side_effect=Exception("Database error")
+            "service.models.Shopcart.all", side_effect=SQLAlchemyError("Database error")
         ):
             resp = self.client.get("/shopcarts")
             self.assertEqual(resp.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+
             data = resp.get_json()
-            self.assertIn("error", data)
-            self.assertEqual(data["error"], "Internal server error: Database error")
-            expected_error = "Internal server error: Database error"
-            self.assertEqual(data["error"], expected_error)
+            self.assertEqual(data["error"], "Internal Server Error")
 
     def test_read_user_shopcart(self):
         """It should get the shopcarts"""
@@ -250,17 +248,16 @@ class TestShopcartGet(TestShopcartService):
     def test_read_user_shopcart_server_error(self):
         """Read by user_id should handle server errors gracefully"""
         self._populate_shopcarts(count=1, user_id=1)
+
         with patch(
             "service.models.Shopcart.find_by_user_id",
-            side_effect=Exception("Database error"),
+            side_effect=SQLAlchemyError("Database error"),
         ):
             resp = self.client.get("/shopcarts/1")
             self.assertEqual(resp.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+
             data = resp.get_json()
-            self.assertIn("error", data)
-            self.assertEqual(data["error"], "Internal server error: Database error")
-            expected_error = "Internal server error: Database error"
-            self.assertEqual(data["error"], expected_error)
+            self.assertEqual(data["error"], "Internal Server Error")
 
     def test_get_user_shopcart_items(self):
         """It should get all items in a user's shopcart"""
@@ -330,23 +327,17 @@ class TestShopcartGet(TestShopcartService):
 
     def test_get_user_shopcart_items_server_error(self):
         """It should handle server errors gracefully when getting items"""
-        # Create some test data to make sure the database is working initially
         self._populate_shopcarts(count=1, user_id=1)
 
-        # Mock the database query to raise an exception with a specific message
         with patch(
             "service.models.Shopcart.find_by_user_id",
-            side_effect=Exception("Database error"),
+            side_effect=SQLAlchemyError("Database error"),
         ):
             resp = self.client.get("/shopcarts/1/items")
-
-            # Verify the status code is 500 (Internal Server Error)
             self.assertEqual(resp.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-            # Verify the response contains an error message with the exact format
             data = resp.get_json()
-            self.assertIn("error", data)
-            self.assertEqual(data["error"], "Internal server error: Database error")
+            self.assertEqual(data["error"], "Internal Server Error")
 
     ######################################################################
     #  Get Cart Item Testcase
@@ -404,24 +395,19 @@ class TestShopcartGet(TestShopcartService):
         """It should handle server errors gracefully when getting a specific item"""
         user_id = 1
         item_id = 1
-        # Create some test data to make sure the database is working initially
         self._populate_shopcarts(count=1, user_id=user_id)
 
-        # Mock the database query to raise an exception with a specific message
         with patch(
-            "service.models.Shopcart.find", side_effect=Exception("Database error")
+            "service.models.Shopcart.find",
+            side_effect=SQLAlchemyError("Database error"),
         ):
             response = self.client.get(f"/shopcarts/{user_id}/items/{item_id}")
-
-            # Verify the status code is 500 (Internal Server Error)
             self.assertEqual(
                 response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-            # Verify the response contains an error message
             data = response.get_json()
-            self.assertIn("error", data)
-            self.assertEqual(data["error"], "Internal server error: Database error")
+            self.assertEqual(data["error"], "Internal Server Error")
 
     def test_filter_shopcarts_by_exact_created_at(self):
         """It should filter shopcarts by exact created_at date"""
