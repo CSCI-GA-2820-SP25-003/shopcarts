@@ -3,38 +3,127 @@ GET Controller logic for Shopcart Service
 """
 
 from werkzeug.exceptions import HTTPException
-from flask import jsonify, abort
+from flask import jsonify, abort, request
 from flask import current_app as app
 from service.models import Shopcart
 from service.common import status
+from sqlalchemy import and_, or_
+from datetime import datetime, timedelta
 
 
 def get_shopcarts_controller():
-    """List all shopcarts grouped by user"""
-    app.logger.info("Request to list shopcarts")
+    """List all shopcarts with optional filtering based on query parameters"""
+    app.logger.info("Request to list shopcarts with filters")
 
     try:
-        # Initialize an empty list to store unique user shopcarts
-        shopcarts_list = []
+        filters = []
+        query_params = request.args.to_dict(flat=False)  # multiple values per key
 
-        # Get all shopcarts grouped by user_id
-        all_items = Shopcart.all()
+        range_operators = {
+            "lt": "<",
+            "lte": "<=",
+            "gt": ">",
+            "gte": ">=",
+        }
 
-        # Group items by user_id
+        valid_fields = {
+            "user_id": (Shopcart.user_id, int),
+            "item_id": (Shopcart.item_id, int),
+            "description": (Shopcart.description, str),
+            "quantity": (Shopcart.quantity, int),
+            "price": (Shopcart.price, float),
+            "created_at": (Shopcart.created_at, datetime),
+            "last_updated": (Shopcart.last_updated, datetime),
+        }
+
+        def parse_datetime(value):
+            """Convert 'YYYY-MM-DD' string to datetime object at midnight."""
+            try:
+                return datetime.strptime(value, "%Y-%m-%d")
+            except ValueError:
+                raise ValueError(f"Invalid date format: {value}. Expected YYYY-MM-DD.")
+
+        for key, values in query_params.items():
+            if key in valid_fields:
+                field, cast_type = valid_fields[key]
+                condition_list = []
+
+                for value in values:
+                    try:
+                        # range queries (e.g., created_at=~gte~2023-09-01)
+                        if "~" in value:
+                            _, operator, filter_value = value.split("~")
+                            filter_value = (
+                                parse_datetime(filter_value)
+                                if cast_type is datetime
+                                else cast_type(filter_value)
+                            )
+
+                            # Adjust range filtering for datetime
+                            if cast_type is datetime and operator in ["lt", "lte"]:
+                                filter_value += timedelta(days=1) - timedelta(seconds=1)
+
+                            expr = eval(
+                                f"field {range_operators[operator]} filter_value"
+                            )
+                            condition_list.append(expr)
+
+                        # Handle multiple dates for created_at using OR conditions
+                        elif cast_type is datetime and "," in value:
+                            date_conditions = []
+                            for date_str in value.split(","):
+                                date_obj = parse_datetime(date_str.strip())
+                                start_date = date_obj
+                                end_date = (
+                                    start_date
+                                    + timedelta(days=1)
+                                    - timedelta(seconds=1)
+                                )
+                                date_conditions.append(
+                                    and_(field >= start_date, field <= end_date)
+                                )
+
+                            condition_list.append(or_(*date_conditions))
+
+                        # Handle exact match
+                        elif cast_type is datetime:
+                            start_date = parse_datetime(value)
+                            end_date = (
+                                start_date + timedelta(days=1) - timedelta(seconds=1)
+                            )
+                            condition_list.append(
+                                and_(field >= start_date, field <= end_date)
+                            )
+
+                        else:
+                            condition_list.append(field == cast_type(value))
+
+                    except (ValueError, TypeError) as e:
+                        return jsonify({"error": str(e)}), status.HTTP_400_BAD_REQUEST
+
+                if condition_list:
+                    filters.append(or_(*condition_list))
+
+        if filters:
+            filtered_items = Shopcart.query.filter(and_(*filters)).all()
+        else:
+            filtered_items = Shopcart.all()
+
         user_items = {}
-        for item in all_items:
+        for item in filtered_items:
             if item.user_id not in user_items:
                 user_items[item.user_id] = []
             user_items[item.user_id].append(item.serialize())
 
-        # Create the response list
-        for user_id, items in user_items.items():
-            shopcarts_list.append({"user_id": user_id, "items": items})
+        shopcarts_list = [
+            {"user_id": user_id, "items": items}
+            for user_id, items in user_items.items()
+        ]
 
         return jsonify(shopcarts_list), status.HTTP_200_OK
 
-    except Exception as e:  # pylint: disable=broad-except
-        app.logger.error(f"Error listing shopcarts: {str(e)}")
+    except Exception as e:
+        app.logger.error(f"Error filtering shopcarts: {str(e)}")
         return (
             jsonify({"error": f"Internal server error: {str(e)}"}),
             status.HTTP_500_INTERNAL_SERVER_ERROR,

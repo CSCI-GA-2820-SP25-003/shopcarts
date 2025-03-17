@@ -23,6 +23,8 @@ TestYourResourceModel API Service Test Suite
 from unittest.mock import patch
 from service.common import status
 from .test_routes import TestShopcartService
+from datetime import datetime
+from service.models import Shopcart
 
 
 ######################################################################
@@ -410,3 +412,59 @@ class TestShopcartGet(TestShopcartService):
             data = response.get_json()
             self.assertIn("error", data)
             self.assertEqual(data["error"], "Internal server error: Database error")
+
+    def test_filter_shopcarts_by_exact_created_at(self):
+        """It should filter shopcarts by exact created_at date"""
+        self._populate_shopcarts(count=2, user_id=1)
+
+        # Get the created_at timestamp from the first item
+        shopcart = Shopcart.query.first()
+        created_date = shopcart.created_at.strftime("%Y-%m-%d")
+
+        resp = self.client.get(f"/shopcarts?created_at={created_date}")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+        data = resp.get_json()
+        self.assertGreater(len(data), 0)
+
+        for cart in data:
+            for item in cart["items"]:
+                self.assertEqual(item["created_at"][:10], created_date)
+
+    def test_filter_shopcarts_by_created_at_range(self):
+        """It should filter shopcarts using created_at range queries"""
+        self._populate_shopcarts(count=5)
+
+        # Test range query (e.g., created_at >= some date)
+        date_query = "2023-09-01"
+        resp = self.client.get(f"/shopcarts?created_at=~gte~{date_query}")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+        data = resp.get_json()
+        for cart in data:
+            for item in cart["items"]:
+                self.assertGreaterEqual(
+                    datetime.strptime(item["created_at"][:10], "%Y-%m-%d"),
+                    datetime.strptime(date_query, "%Y-%m-%d"),
+                )
+
+    def test_filter_shopcarts_by_multiple_created_at(self):
+        """It should filter shopcarts using multiple created_at values"""
+        self._populate_shopcarts(count=5)
+
+        # Fetch two created_at values
+        created_dates = [
+            shopcart.created_at.strftime("%Y-%m-%d")
+            for shopcart in Shopcart.query.limit(2).all()
+        ]
+        date_query = ",".join(created_dates)
+
+        resp = self.client.get(f"/shopcarts?created_at={date_query}")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+        data = resp.get_json()
+        self.assertGreater(len(data), 0)
+
+        for cart in data:
+            for item in cart["items"]:
+                self.assertIn(item["created_at"][:10], created_dates)
