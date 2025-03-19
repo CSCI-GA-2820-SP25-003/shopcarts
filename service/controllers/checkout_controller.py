@@ -1,6 +1,4 @@
-"""
-Checkout controller logic for a shopcart service
-"""
+"""Checkout controller logic for a Shopcart service."""
 
 from flask import jsonify
 from flask import current_app as app
