@@ -137,13 +137,6 @@ def get_shopcarts_controller():
         app.logger.error(f"Invalid filter parameter: {exc}")
         return jsonify({"error": str(exc)}), status.HTTP_400_BAD_REQUEST
 
-    except SQLAlchemyError as exc:
-        app.logger.error(f"Database error: {exc}", exc_info=True)
-        return (
-            jsonify({"error": "A database error occurred."}),
-            status.HTTP_500_INTERNAL_SERVER_ERROR,
-        )
-
     # Create the response list **AFTER** try-except
     shopcarts_list = [
         {"user_id": user_id, "items": items} for user_id, items in user_items.items()
