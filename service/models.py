@@ -327,7 +327,7 @@ class Shopcart(db.Model):
     def _build_filter_conditions(cls, filters):
         """Creates filter conditions from filter dict
 
-        This is a private helper method to reduce complexity
+        This is a private helper method to reduce complexity.
         """
         conditions = []
 
@@ -335,6 +335,8 @@ class Shopcart(db.Model):
         type_converters = {
             "price": float,
             "quantity": int,
+            "user_id": int,
+            "user_uid": str,  # Added user_uid as a string field
             "item_id": int,
             "created_at": datetime.fromisoformat,
             "last_updated": datetime.fromisoformat,
@@ -345,24 +347,37 @@ class Shopcart(db.Model):
             operator = condition["operator"]
             value = condition["value"]
 
-            # Convert value if needed
+            # Convert value if needed (handling lists properly)
             if field in type_converters:
                 try:
-                    value = type_converters[field](value)
+                    if isinstance(value, list):  # Convert each element in the list
+                        value = [type_converters[field](v) for v in value]
+                    else:
+                        value = type_converters[field](value)
                 except (ValueError, TypeError) as exc:
                     raise ValueError(f"Invalid value for {field}: {value}") from exc
 
-            # Map operators to conditions
-            if operator == "eq":
-                conditions.append(model_attr == value)
-            elif operator == "lt":
-                conditions.append(model_attr < value)
-            elif operator == "lte":
-                conditions.append(model_attr <= value)
-            elif operator == "gt":
-                conditions.append(model_attr > value)
-            elif operator == "gte":
-                conditions.append(model_attr >= value)
+            # Switch-case like structure for operator mapping
+            match operator:
+                case "eq":
+                    conditions.append(model_attr == value)
+                case "lt":
+                    conditions.append(model_attr < value)
+                case "lte":
+                    conditions.append(model_attr <= value)
+                case "gt":
+                    conditions.append(model_attr > value)
+                case "gte":
+                    conditions.append(model_attr >= value)
+                case "in":
+                    if isinstance(value, list):
+                        conditions.append(model_attr.in_(value))
+                    else:
+                        raise ValueError(
+                            f"Invalid 'in' operator value for {field}: must be a list"
+                        )
+                case _:
+                    raise ValueError(f"Unsupported operator: {operator}")
 
         return conditions
 
@@ -386,3 +401,43 @@ class Shopcart(db.Model):
             item.delete()
 
         return total_price
+
+    @classmethod
+    def find_all_with_filters(cls, range_filters=None, attribute_filters=None):
+        """Finds all shopcart items applying both range and attribute filters"""
+        logger.info("Finding all shopcart items with filters")
+
+        query = cls.query
+        range_filters = range_filters or {}
+
+        print("\n🔍 DEBUG: Received range_filters:", range_filters)
+
+        if "min_price" in range_filters or "max_price" in range_filters:
+            min_price = range_filters.get("min_price", 0)
+            max_price = range_filters.get("max_price", math.inf)
+            query = query.filter(cls.price >= min_price, cls.price <= max_price)
+
+        if "min_qty" in range_filters or "max_qty" in range_filters:
+            min_qty = range_filters.get("min_qty", 0)
+            max_qty = range_filters.get("max_qty", math.inf)
+            query = query.filter(cls.quantity >= min_qty, cls.quantity <= max_qty)
+
+        if "min_date" in range_filters or "max_date" in range_filters:
+            min_date = range_filters.get("min_date", datetime(1970, 1, 1))
+            max_date = range_filters.get("max_date", datetime(3000, 1, 1))
+            query = query.filter(cls.created_at >= min_date, cls.created_at <= max_date)
+
+        if "min_update" in range_filters or "max_update" in range_filters:
+            min_update = range_filters.get("min_update", datetime(1970, 1, 1))
+            max_update = range_filters.get("max_update", datetime(3000, 1, 1))
+            query = query.filter(
+                cls.last_updated >= min_update, cls.last_updated <= max_update
+            )
+
+        if attribute_filters:
+            filter_conditions = cls._build_filter_conditions(attribute_filters)
+            query = query.filter(*filter_conditions)
+
+        results = query.all()
+
+        return results

@@ -636,3 +636,16 @@ class TestShopCartQueries(ShopCartModelTestCase):
         self.assertEqual(len(found), count)
         for shopcart in found:
             self.assertEqual(shopcart.last_updated, last_updated)
+
+    def test_build_filter_conditions_in(self):
+        """It should generate conditions for 'in' operator"""
+        filters = {"user_id": {"operator": "in", "value": [1, 2, 3]}}
+        conditions = Shopcart._build_filter_conditions(filters)
+
+        # Ensure the IN condition exists
+        self.assertEqual(len(conditions), 1)
+        condition_str = str(conditions[0])
+
+        # Check that the SQLAlchemy query contains the correct structure
+        self.assertIn("shopcart.user_id IN", condition_str)
+        self.assertIn("POSTCOMPILE", condition_str)

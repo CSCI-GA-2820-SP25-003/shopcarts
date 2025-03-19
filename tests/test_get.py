@@ -181,8 +181,8 @@ class TestShopcartGet(TestShopcartService):
         self._populate_shopcarts(count=1)
         after_creation = datetime.now(timezone.utc) + timedelta(minutes=1)
 
-        range_start = (before_creation - timedelta(days=1)).strftime("%d-%m-%Y")
-        range_end = (after_creation + timedelta(days=1)).strftime("%d-%m-%Y")
+        range_start = (before_creation - timedelta(days=1)).strftime("%Y-%m-%d")
+        range_end = (after_creation + timedelta(days=1)).strftime("%Y-%m-%d")
 
         resp = self.client.get(f"/shopcarts?range_created_at={range_start},{range_end}")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
