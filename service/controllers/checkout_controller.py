@@ -1,9 +1,10 @@
+"""
+Checkout controller logic for a shopcart service
+"""
+
 from flask import jsonify
 from flask import current_app as app
 from service.models import Shopcart, DataValidationError
-
-
-# ACTION ROUTE
 
 
 def checkout_controller(user_id):
