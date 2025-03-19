@@ -2,7 +2,6 @@
 Helper functions for services
 """
 
-from datetime import datetime
 from flask import request, jsonify
 from service.common import status
 from service.models import Shopcart
