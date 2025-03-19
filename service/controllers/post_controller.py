@@ -2,9 +2,9 @@
 POST Controller logic for Shopcart Service
 """
 
+from json import JSONDecodeError
 from flask import request, jsonify, url_for
 from flask import current_app as app
-
 from service.common import status
 from service.common.helpers import (
     validate_request_data,
@@ -16,7 +16,14 @@ from service.models import Shopcart
 
 def add_to_or_create_cart_controller(user_id):
     """Add a product to a user's shopping cart or update quantity if it already exists."""
-    data = request.get_json()
+    try:
+        data = request.get_json()
+    except JSONDecodeError:
+        return (
+            jsonify({"error": "Invalid JSON format. Please check your request."}),
+            status.HTTP_400_BAD_REQUEST,
+        )
+
     if not data:
         return jsonify({"error": "Missing JSON payload"}), status.HTTP_400_BAD_REQUEST
 

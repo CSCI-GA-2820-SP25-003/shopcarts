@@ -3,7 +3,7 @@ GET Controller logic for Shopcart Service
 """
 
 from datetime import datetime, timedelta
-from json import JSONDecodeError
+
 from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.exceptions import InternalServerError
@@ -53,6 +53,9 @@ def apply_filter(field, cast_type, value):
 
             if cast_type is datetime and operator in ["lt", "lte"]:
                 filter_value += timedelta(days=1) - timedelta(seconds=1)
+
+            if operator not in RANGE_OPERATORS:
+                raise ValueError(f"Invalid operator: {operator}")
 
             return RANGE_OPERATORS[operator](field, filter_value)
 
@@ -118,23 +121,13 @@ def get_shopcarts_controller():
 
         return jsonify(shopcarts_list), status.HTTP_200_OK
 
-    except JSONDecodeError as exc:  # ✅ Catch specific first
-        app.logger.error(f"JSON encoding error: {exc}", exc_info=True)
-        raise InternalServerError("Error encoding response JSON.") from exc
-
-    except ValueError as exc:  # ✅ Now this comes after JSONDecodeError
+    except ValueError as exc:
         app.logger.error(f"Invalid filter parameter: {exc}")
         return jsonify({"error": str(exc)}), status.HTTP_400_BAD_REQUEST
 
     except SQLAlchemyError as exc:
         app.logger.error(f"Database error: {exc}", exc_info=True)
-        raise InternalServerError("A database error occurred.") from exc  # ✅ FIXED
-
-    except AttributeError as exc:
-        app.logger.error(f"Unexpected attribute error: {exc}", exc_info=True)
-        raise InternalServerError(
-            "Unexpected attribute error in processing."
-        ) from exc  # ✅ FIXED
+        raise InternalServerError("A database error occurred.") from exc
 
 
 def get_user_shopcart_controller(user_id):
@@ -162,18 +155,12 @@ def get_user_shopcart_controller(user_id):
     except HTTPException as exc:
         raise exc
 
-    except SQLAlchemyError as exc:  # ✅ Catching database-related errors
+    except SQLAlchemyError as exc:
         app.logger.error(
             f"Database error while reading shopcart for user_id '{user_id}': {exc}",
             exc_info=True,
         )
         raise InternalServerError("A database error occurred.") from exc
-
-    except AttributeError as exc:  # ✅ Catching attribute access issues
-        app.logger.error(
-            f"Unexpected attribute error for user_id '{user_id}': {exc}", exc_info=True
-        )
-        raise InternalServerError("Unexpected attribute error in processing.") from exc
 
 
 def get_user_shopcart_items_controller(user_id):
@@ -205,18 +192,12 @@ def get_user_shopcart_items_controller(user_id):
     except HTTPException as exc:
         raise exc
 
-    except SQLAlchemyError as exc:  # ✅ Database errors
+    except SQLAlchemyError as exc:
         app.logger.error(
             f"Database error while retrieving items for user_id '{user_id}': {exc}",
             exc_info=True,
         )
         raise InternalServerError("A database error occurred.") from exc
-
-    except AttributeError as exc:  # ✅ Catching potential attribute issues
-        app.logger.error(
-            f"Unexpected attribute error for user_id '{user_id}': {exc}", exc_info=True
-        )
-        raise InternalServerError("Unexpected attribute error in processing.") from exc
 
 
 def get_cart_item_controller(user_id, item_id):
@@ -242,16 +223,9 @@ def get_cart_item_controller(user_id, item_id):
     except HTTPException as exc:
         raise exc
 
-    except SQLAlchemyError as exc:  # ✅ Database errors
+    except SQLAlchemyError as exc:
         app.logger.error(
             f"Database error while retrieving item {item_id} for user_id '{user_id}': {exc}",
             exc_info=True,
         )
         raise InternalServerError("A database error occurred.") from exc
-
-    except AttributeError as exc:  # ✅ Catching potential attribute issues
-        app.logger.error(
-            f"Unexpected attribute error while retrieving item {item_id} for user_id '{user_id}': {exc}",
-            exc_info=True,
-        )
-        raise InternalServerError("Unexpected attribute error in processing.") from exc

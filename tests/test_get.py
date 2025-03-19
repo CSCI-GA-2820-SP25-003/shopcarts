@@ -21,11 +21,13 @@ TestYourResourceModel API Service Test Suite
 
 # pylint: disable=duplicate-code
 from unittest.mock import patch
+from json import JSONDecodeError
 from sqlalchemy.exc import SQLAlchemyError
 from service.common import status
 from .test_routes import TestShopcartService
 from datetime import datetime
 from service.models import Shopcart, db
+from service.controllers.get_controller import apply_filter
 
 
 ######################################################################
@@ -531,3 +533,38 @@ class TestShopcartGet(TestShopcartService):
         data = resp.get_json()
         self.assertIn("error", data)
         self.assertIn("Invalid date format", data["error"])
+
+    def test_apply_filter_invalid_value(self):
+        """It should raise a ValueError for an invalid filter value"""
+        with self.assertRaises(ValueError) as context:
+            apply_filter(Shopcart.price, int, "invalid-number")
+
+        self.assertIn("Invalid filter value", str(context.exception))
+
+    def test_post_user_shopcart_json_decode_error(self):
+        """It should handle JSON decoding errors when creating a shopcart"""
+
+        # Ensure user_id=1 exists by creating an entry
+        self._populate_shopcarts(count=1, user_id=1)
+
+        # Send malformed JSON to trigger JSONDecodeError
+        response = self.client.post(
+            "/shopcarts/1", data="{invalid-json}", content_type="application/json"
+        )
+
+        # Expect a 400 Bad Request response
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        data = response.get_json()
+
+        # Verify the response contains "Bad Request" in any form
+        self.assertIn("message", data)  # Flask usually includes "message"
+        self.assertIn("Bad Request", data["message"])  # Allow partial match
+
+    def test_get_shopcarts_invalid_operator(self):
+        """It should return 400 Bad Request for an invalid operator in filtering"""
+        resp = self.client.get("/shopcarts?price=~invalid~100")
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        data = resp.get_json()
+        self.assertIn("error", data)
+        self.assertIn("Invalid filter value: ~invalid~100", data["error"])
