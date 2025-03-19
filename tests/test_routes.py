@@ -72,14 +72,20 @@ class TestShopcartService(TestCase):
     ######################################################################
     #  H E L P E R   M E T H O D S
     ######################################################################
-    def _populate_shopcarts(self, count=5, user_id=None):
+    def _populate_shopcarts(self, count=5, user_id=None, quantity=None, price=None):
         """Create and populate shopcarts in the database using ShopcartFactory"""
         shopcarts = []
         for _ in range(count):
+            attrs = {}
+
             if user_id is not None:
-                shopcart = ShopcartFactory(user_id=user_id)
-            else:
-                shopcart = ShopcartFactory()
+                attrs["user_id"] = user_id
+            if quantity is not None:
+                attrs["quantity"] = quantity
+            if price is not None:
+                attrs["price"] = price
+
+            shopcart = ShopcartFactory(**attrs)
             payload = {
                 "item_id": shopcart.item_id,
                 "description": shopcart.description,

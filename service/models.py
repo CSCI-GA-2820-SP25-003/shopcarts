@@ -18,6 +18,7 @@ created_at (datetime) - the timestamp when the item was added to the cart
 last_updated (datetime) - the timestamp of the most recent update to the item in the cart
 """
 
+import math
 import logging
 from datetime import datetime
 from decimal import Decimal
@@ -271,3 +272,32 @@ class Shopcart(db.Model):
         """
         logger.info("Processing lookup for last_updated: %s ...", last_updated)
         return cls.query.filter_by(last_updated=last_updated).all()
+
+    @classmethod
+    def find_by_ranges(cls, filters=None):
+        """Finds all shopcart items based on optional ranges"""
+        logger.info("Finding items with dynamic filters")
+        filters = filters or {}
+
+        min_price = filters.get("min_price", 0)
+        max_price = filters.get("max_price", math.inf)
+
+        min_qty = filters.get("min_qty", 0)
+        max_qty = filters.get("max_qty", math.inf)
+
+        min_date = filters.get("min_date", datetime(1970, 1, 1))
+        max_date = filters.get("max_date", datetime(3000, 1, 1))
+
+        min_update = filters.get("min_update", datetime(1970, 1, 1))
+        max_update = filters.get("max_update", datetime(3000, 1, 1))
+
+        return cls.query.filter(
+            cls.price >= min_price,
+            cls.price <= max_price,
+            cls.quantity >= min_qty,
+            cls.quantity <= max_qty,
+            cls.created_at >= min_date,
+            cls.created_at <= max_date,
+            cls.last_updated >= min_update,
+            cls.last_updated <= max_update,
+        ).all()

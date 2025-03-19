@@ -11,7 +11,7 @@ from werkzeug.exceptions import HTTPException
 from flask import jsonify, abort, request
 from flask import current_app as app
 from service.models import Shopcart
-from service.common import status
+from service.common import status, helpers
 
 
 RANGE_OPERATORS = {
@@ -91,9 +91,35 @@ def apply_filter(field, cast_type, value):
 
 
 def get_shopcarts_controller():
+    """List all shopcarts grouped by user"""
     """List all shopcarts with optional filtering based on query parameters"""
     app.logger.info("Request to list shopcarts with filters")
 
+    # Initialize an empty list to store unique user shopcarts
+    shopcarts_list = []
+
+    if not request.args:
+        app.logger.info("Request to list shopcarts")
+        # Get all shopcarts grouped by user_id
+        all_items = Shopcart.all()
+
+    else:
+        app.logger.info("Request to list shopcarts with query range")
+        filters = {}
+        try:
+            filters = helpers.extract_filters()
+            all_items = Shopcart.find_by_ranges(filters=filters)
+        except ValueError as ve:
+            return jsonify({"error": str(ve)}), 400
+
+        all_items = Shopcart.find_by_ranges(filters=filters)
+
+    # Group items by user_id
+    user_items = {}
+    for item in all_items:
+        if item.user_id not in user_items:
+            user_items[item.user_id] = []
+        user_items[item.user_id].append(item.serialize())
     try:
         query_params = request.args.to_dict(flat=False)
         filters = []
@@ -114,12 +140,15 @@ def get_shopcarts_controller():
         for item in filtered_items:
             user_items.setdefault(item.user_id, []).append(item.serialize())
 
+    # Create the response list
+    for user_id, items in user_items.items():
+        shopcarts_list.append({"user_id": user_id, "items": items})
         shopcarts_list = [
             {"user_id": user_id, "items": items}
             for user_id, items in user_items.items()
         ]
 
-        return jsonify(shopcarts_list), status.HTTP_200_OK
+    return jsonify(shopcarts_list), status.HTTP_200_OK
 
     except ValueError as exc:
         app.logger.error(f"Invalid filter parameter: {exc}")
