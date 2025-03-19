@@ -6,6 +6,73 @@ from datetime import datetime
 from flask import request, jsonify
 from service.common import status
 from service.models import Shopcart
+from sqlalchemy import and_, or_
+from datetime import timedelta, datetime
+
+RANGE_OPERATORS = {
+    "lt": lambda field, value: field < value,
+    "lte": lambda field, value: field <= value,
+    "gt": lambda field, value: field > value,
+    "gte": lambda field, value: field >= value,
+}
+
+
+def parse_datetime(value):
+    """Convert 'YYYY-MM-DD' to a datetime object."""
+    try:
+        return datetime.strptime(value, "%Y-%m-%d")
+    except ValueError as exc:
+        raise ValueError(f"Invalid date format: {value}. Expected YYYY-MM-DD.") from exc
+
+
+def apply_filter(field, cast_type, value):
+    """Applies a filter condition based on the field type and value format."""
+    try:
+        if "~" in value:
+            _, operator, filter_value = value.split("~")
+            filter_value = (
+                parse_datetime(filter_value)
+                if cast_type is datetime
+                else cast_type(filter_value)
+            )
+
+            if cast_type is datetime and operator in ["lt", "lte"]:
+                filter_value += timedelta(days=1) - timedelta(seconds=1)
+
+            if operator not in RANGE_OPERATORS:
+                raise ValueError(f"Invalid operator: {operator}")
+
+            return RANGE_OPERATORS[operator](field, filter_value)
+
+        if cast_type is datetime and "," in value:
+            date_conditions = [
+                and_(
+                    field >= parse_datetime(date_str.strip()),
+                    field
+                    <= parse_datetime(date_str.strip())
+                    + timedelta(days=1)
+                    - timedelta(seconds=1),
+                )
+                for date_str in value.split(",")
+            ]
+            return or_(*date_conditions)
+
+        if cast_type is datetime:
+            start_date = parse_datetime(value)
+            return and_(
+                field >= start_date,
+                field <= start_date + timedelta(days=1) - timedelta(seconds=1),
+            )
+
+        if "," in value:
+            return field.in_([cast_type(v.strip()) for v in value.split(",")])
+        return field == cast_type(value)
+
+    except ValueError as exc:
+        # Preserve the original error message
+        if "Invalid date format" in str(exc):
+            raise exc  # This will keep the message expected by the test
+        raise ValueError(f"Invalid filter value: {value}") from exc
 
 
 def validate_request_data(data):
@@ -171,3 +238,60 @@ def extract_filters():
             filters[max_key] = max_val
 
     return filters
+
+
+VALID_FIELDS = {
+    "user_id": (Shopcart.user_id, int),
+    "price": (Shopcart.price, float),
+    "created_at": (Shopcart.created_at, datetime),
+}
+
+
+def fetch_all_shopcarts():
+    """Retrieve all shopcarts from the database."""
+    return Shopcart.all()
+
+
+def fetch_filtered_shopcarts():
+    """Retrieve shopcarts based on request filters and query parameters."""
+    try:
+        # ✅ Step 1: Extract standard filters (from helpers)
+        filters = extract_filters()
+        filtered_items = Shopcart.find_by_ranges(
+            filters=filters
+        )  # ✅ Preserves range filtering
+
+        # ✅ Step 2: Apply additional filtering based on query parameters
+        query_params = request.args.to_dict(flat=False)
+        additional_filters = build_filter_conditions(query_params)
+
+        if additional_filters:
+            filtered_items = Shopcart.query.filter(and_(*additional_filters)).all()
+
+        return filtered_items
+
+    except ValueError as exc:
+        raise ValueError(f"Invalid filter parameter: {exc}") from exc
+
+
+def build_filter_conditions(query_params):
+    """Builds SQLAlchemy filter conditions from query parameters."""
+    filters = []
+    for key, values in query_params.items():
+        if key in VALID_FIELDS:
+            field, cast_type = VALID_FIELDS[key]
+            conditions = [apply_filter(field, cast_type, value) for value in values]
+            if conditions:
+                filters.append(or_(*conditions))
+    return filters
+
+
+def format_shopcarts_response(items):
+    """Formats the shopcart response grouped by user."""
+    user_items = {}
+    for item in items:
+        user_items.setdefault(item.user_id, []).append(item.serialize())
+
+    return [
+        {"user_id": user_id, "items": items} for user_id, items in user_items.items()
+    ]

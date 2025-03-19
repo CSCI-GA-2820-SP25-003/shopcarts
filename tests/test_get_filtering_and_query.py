@@ -4,7 +4,7 @@ Test cases for shopcart filtering and queries
 
 from datetime import datetime
 from service.models import Shopcart, db
-from service.controllers.get_controller import apply_filter
+from service.common.helpers import apply_filter
 from service.common import status
 from .test_routes import TestShopcartService
 
