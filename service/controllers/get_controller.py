@@ -67,8 +67,33 @@ def get_user_shopcart_controller(user_id):
                 status.HTTP_404_NOT_FOUND, f"User with id '{user_id}' was not found."
             )
 
-        user_list = [{"user_id": user_id, "items": []}]
+        range_filters = helpers.extract_filters()
+
+        filtered_items = []
         for item in user_items:
+            # Check quantity range if present
+            if "min_qty" in range_filters and "max_qty" in range_filters:
+                if not (
+                    range_filters["min_qty"]
+                    <= item.quantity
+                    <= range_filters["max_qty"]
+                ):
+                    continue
+
+            # Check price range if present
+            if "min_price" in range_filters and "max_price" in range_filters:
+                price_val = float(item.price)
+                if not (
+                    range_filters["min_price"]
+                    <= price_val
+                    <= range_filters["max_price"]
+                ):
+                    continue
+
+            filtered_items.append(item)
+
+        user_list = [{"user_id": user_id, "items": []}]
+        for item in filtered_items:
             user_list[0]["items"].append(item.serialize())
         return jsonify(user_list), status.HTTP_200_OK
     except HTTPException as e:
@@ -92,6 +117,7 @@ def get_user_shopcart_items_controller(user_id):
             return abort(
                 status.HTTP_404_NOT_FOUND, f"User with id '{user_id}' was not found."
             )
+
         # Just return the serialized items directly as a list
         items_list = [{"user_id": user_id, "items": []}]
         for item in user_items:
