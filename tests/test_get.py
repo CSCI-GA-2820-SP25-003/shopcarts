@@ -23,6 +23,7 @@ TestYourResourceModel API Service Test Suite
 from unittest.mock import patch
 from service.common import status
 from .test_routes import TestShopcartService
+from decimal import Decimal
 
 ######################################################################
 #  T E S T   C A S E S
@@ -403,3 +404,110 @@ class TestShopcartGet(TestShopcartService):
             data = response.get_json()
             self.assertIn("error", data)
             self.assertEqual(data["error"], "Internal server error: Database error")
+
+    ######################################################################
+    #  Test Cases for Price Filters
+    ######################################################################
+
+    def test_get_shopcart_with_max_price_filter(self):
+        """It should filter items by maximum price"""
+        # Create a user with multiple items at different price points
+        user_id = 750
+        self._populate_shopcarts(count=1, user_id=user_id, price=Decimal("10.00"))
+        self._populate_shopcarts(count=1, user_id=user_id, price=Decimal("25.00"))
+        self._populate_shopcarts(count=1, user_id=user_id, price=Decimal("50.00"))
+        self._populate_shopcarts(count=1, user_id=user_id, price=Decimal("75.00"))
+        self._populate_shopcarts(count=1, user_id=user_id, price=Decimal("100.00"))
+        
+        # Test with max-price=50
+        response = self.client.get(f"/shopcarts/{user_id}?max-price=50")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        # Parse response data
+        data = response.get_json()
+        self.assertEqual(len(data), 1)
+        cart_items = data[0]["items"]
+        
+        # Verify only items <= 50.00 are returned (should be 3 items: 10, 25, 50)
+        self.assertEqual(len(cart_items), 3)
+        for item in cart_items:
+            self.assertLessEqual(float(item["price"]), 50.00)
+
+    def test_get_shopcart_with_min_price_filter(self):
+        """It should filter items by minimum price"""
+        # Create a user with multiple items at different price points
+        user_id = 751
+        self._populate_shopcarts(count=1, user_id=user_id, price=Decimal("10.00"))
+        self._populate_shopcarts(count=1, user_id=user_id, price=Decimal("25.00"))
+        self._populate_shopcarts(count=1, user_id=user_id, price=Decimal("50.00"))
+        self._populate_shopcarts(count=1, user_id=user_id, price=Decimal("75.00"))
+        self._populate_shopcarts(count=1, user_id=user_id, price=Decimal("100.00"))
+        
+        # Test with min-price=50
+        response = self.client.get(f"/shopcarts/{user_id}?min-price=50")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        # Parse response data
+        data = response.get_json()
+        self.assertEqual(len(data), 1)
+        cart_items = data[0]["items"]
+        
+        # Verify only items >= 50.00 are returned (should be 3 items: 50, 75, 100)
+        self.assertEqual(len(cart_items), 3)
+        for item in cart_items:
+            self.assertGreaterEqual(float(item["price"]), 50.00)
+
+    def test_get_shopcart_with_price_range_filter(self):
+        """It should filter items by both minimum and maximum price"""
+        # Create a user with multiple items at different price points
+        user_id = 752
+        self._populate_shopcarts(count=1, user_id=user_id, price=Decimal("10.00"))
+        self._populate_shopcarts(count=1, user_id=user_id, price=Decimal("25.00"))
+        self._populate_shopcarts(count=1, user_id=user_id, price=Decimal("50.00"))
+        self._populate_shopcarts(count=1, user_id=user_id, price=Decimal("75.00"))
+        self._populate_shopcarts(count=1, user_id=user_id, price=Decimal("100.00"))
+        
+        # Test with min-price=25 and max-price=75
+        response = self.client.get(f"/shopcarts/{user_id}?min-price=25&max-price=75")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        # Parse response data
+        data = response.get_json()
+        self.assertEqual(len(data), 1)
+        cart_items = data[0]["items"]
+        
+        # Verify only items between 25.00 and 75.00 inclusive are returned (should be 3 items: 25, 50, 75)
+        self.assertEqual(len(cart_items), 3)
+        for item in cart_items:
+            price = float(item["price"])
+            self.assertGreaterEqual(price, 25.00)
+            self.assertLessEqual(price, 75.00)
+
+    def test_get_shopcart_with_invalid_price_range(self):
+        """It should return an error when min-price > max-price"""
+        user_id = 753
+        self._populate_shopcarts(count=2, user_id=user_id)
+        
+        # Test with min-price=100 and max-price=50
+        response = self.client.get(f"/shopcarts/{user_id}?min-price=100&max-price=50")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        
+        # Verify error message
+        data = response.get_json()
+        self.assertIn("error", data)
+        self.assertIn("min-price", data["error"])
+        self.assertIn("max-price", data["error"])
+
+    def test_get_shopcart_with_invalid_price_format(self):
+        """It should return an error when price parameters are not valid numbers"""
+        user_id = 754
+        self._populate_shopcarts(count=2, user_id=user_id)
+        
+        # Test with non-numeric min-price
+        response = self.client.get(f"/shopcarts/{user_id}?min-price=abc")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        
+        # Verify error message
+        data = response.get_json()
+        self.assertIn("error", data)
+        self.assertIn("Invalid min-price format", data["error"])

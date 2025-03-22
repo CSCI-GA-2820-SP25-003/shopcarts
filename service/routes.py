@@ -110,7 +110,17 @@ def list_shopcarts():
 
 @app.route("/shopcarts/<int:user_id>", methods=["GET"])
 def get_user_shopcart(user_id):
-    """Gets the shopcart for a specific user id"""
+    """
+    Gets the shopcart for a specific user id
+    This endpoint retrieves all items in a user's shopping cart
+    with optional price filtering using query parameters:
+    - min-price: Show only items with price >= min-price
+    - max-price: Show only items with price <= max-price
+    Examples:
+        GET /shopcarts/123?max-price=50
+        GET /shopcarts/123?min-price=10
+        GET /shopcarts/123?min-price=10&max-price=50
+    """
     return get_user_shopcart_controller(user_id)
 
 

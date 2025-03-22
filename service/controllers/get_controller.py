@@ -49,34 +49,30 @@ def get_user_shopcart_controller(user_id):
 
     try:
         # Check if there are any query parameters for filtering
+        filters = {}
         if request.args:
-            try:
-                filters = helpers.extract_item_filters(request.args)
-                user_items = Shopcart.find_by_user_id_with_filter(
-                    user_id=user_id, filters=filters
-                )
-            except ValueError as ve:
-                return jsonify({"error": str(ve)}), status.HTTP_400_BAD_REQUEST
-        else:
-            user_items = Shopcart.find_by_user_id(user_id=user_id)
-
-        if not user_items:
-            return abort(
-                status.HTTP_404_NOT_FOUND, f"User with id '{user_id}' was not found."
-            )
-
-        user_list = [{"user_id": user_id, "items": []}]
-        for item in user_items:
-            user_list[0]["items"].append(item.serialize())
-        return jsonify(user_list), status.HTTP_200_OK
+            filters = helpers.extract_item_filters(request.args)
+        
+        # Get shopcart items with filters applied
+        shopcart_items = Shopcart.find_by_user_id_with_filter(user_id, filters)
+        
+        # Format the response
+        shopcarts_list = []
+        if shopcart_items:
+            shopcarts_list.append({
+                "user_id": user_id,
+                "items": [item.serialize() for item in shopcart_items]
+            })
+        
+        return jsonify(shopcarts_list), status.HTTP_200_OK
+        
+    except ValueError as e:
+        return jsonify({"error": str(e)}), status.HTTP_400_BAD_REQUEST
     except HTTPException as e:
-        raise e
-    except Exception as e:  # pylint: disable=broad-except
-        app.logger.error(f"Error reading shopcart for user_id: '{user_id}'")
-        return (
-            jsonify({"error": f"Internal server error: {str(e)}"}),
-            status.HTTP_500_INTERNAL_SERVER_ERROR,
-        )
+        return jsonify({"error": str(e)}), e.code
+    except Exception as e:
+        app.logger.error("Unexpected error: %s", str(e))
+        return jsonify({"error": "Internal server error"}), status.HTTP_500_INTERNAL_SERVER_ERROR
 
 
 def get_user_shopcart_items_controller(user_id):

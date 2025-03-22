@@ -215,6 +215,19 @@ def parse_operator_value(value_string):
     return operator, value
 
 
+def _validate_price_parameter(request_args, param_name, filters_dict, key_name):
+    """Helper function to validate price parameters."""
+    if param_name in request_args:
+        try:
+            price = float(request_args.get(param_name))
+            if price < 0:
+                raise ValueError(f"{param_name} cannot be negative")
+            filters_dict[key_name] = price
+        except ValueError:
+            raise ValueError(f"Invalid {param_name} format. Must be a valid number.")
+    return filters_dict
+
+
 def extract_item_filters(request_args):
     """Extract filter parameters from request arguments.
 
@@ -234,6 +247,18 @@ def extract_item_filters(request_args):
     ]
     filters = {}
 
+    # Process min-price and max-price parameters
+    filters = _validate_price_parameter(request_args, 'min-price', filters, "price_min")
+    filters = _validate_price_parameter(request_args, 'max-price', filters, "price_max")
+    
+    # Validate min_price <= max_price
+    if "price_min" in filters and "price_max" in filters:
+        if filters["price_min"] > filters["price_max"]:
+            raise ValueError(
+                f"min-price ({filters['price_min']}) cannot be greater than max-price ({filters['price_max']})"
+            )
+
+    # Process other filter parameters
     for field in filter_fields:
         if field in request_args:
             try:
