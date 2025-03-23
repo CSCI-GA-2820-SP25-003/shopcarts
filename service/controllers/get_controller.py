@@ -44,6 +44,7 @@ def get_shopcarts_controller():
 
 
 def get_user_shopcart_controller(user_id):
+    """Gets the shopcart for a specific user id"""
     try:
         # Extract filters from the request
         item_filters = helpers.extract_item_filters(request.args)
