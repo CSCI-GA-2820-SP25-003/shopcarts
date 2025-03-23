@@ -272,3 +272,18 @@ def apply_range_filters(items, range_filters):
 
         filtered_items.append(item)
     return filtered_items
+
+
+def get_filtered_user_items(user_id):
+    """Retrieves the shopcart items for a user, applying query filters if present."""
+    if request.args:
+        try:
+            filters = extract_item_filters(request.args)
+            return Shopcart.find_by_user_id_with_filter(
+                user_id=user_id, filters=filters
+            )
+        except ValueError as ve:
+            # Re-raise the error to be handled by the caller
+            raise ValueError(str(ve))
+    else:
+        return Shopcart.find_by_user_id(user_id=user_id)

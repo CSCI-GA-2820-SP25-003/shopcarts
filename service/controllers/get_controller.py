@@ -43,53 +43,15 @@ def get_shopcarts_controller():
     return jsonify(shopcarts_list), status.HTTP_200_OK
 
 
-# def apply_range_filters(items, range_filters):
-#     """
-#     Applies range-based filters (range_qty, range_price, etc.)
-#     to a list of Shopcart items. Returns a filtered list.
-#     """
-#     if not range_filters:
-#         return items  # No range filters provided
-
-#     filtered_items = []
-#     for item in items:
-#         # Check quantity range
-#         if "min_qty" in range_filters and "max_qty" in range_filters:
-#             if not (
-#                 range_filters["min_qty"] <= item.quantity <= range_filters["max_qty"]
-#             ):
-#                 continue
-
-#         # Check price range
-#         if "min_price" in range_filters and "max_price" in range_filters:
-#             price_val = float(item.price)
-#             if not (
-#                 range_filters["min_price"] <= price_val <= range_filters["max_price"]
-#             ):
-#                 continue
-
-#         # If it passes all checks, keep it
-#         filtered_items.append(item)
-
-#     return filtered_items
-
-
 def get_user_shopcart_controller(user_id):
     """Gets the shopcart for a specific user id"""
     app.logger.info("Request to get shopcart for user_id: '%s'", user_id)
 
     try:
-        # Check if there are any query parameters for filtering
-        if request.args:
-            try:
-                filters = helpers.extract_item_filters(request.args)
-                user_items = Shopcart.find_by_user_id_with_filter(
-                    user_id=user_id, filters=filters
-                )
-            except ValueError as ve:
-                return jsonify({"error": str(ve)}), status.HTTP_400_BAD_REQUEST
-        else:
-            user_items = Shopcart.find_by_user_id(user_id=user_id)
+        try:
+            user_items = helpers.get_filtered_user_items(user_id)
+        except ValueError as ve:
+            return jsonify({"error": str(ve)}), status.HTTP_400_BAD_REQUEST
 
         if not user_items:
             return abort(
