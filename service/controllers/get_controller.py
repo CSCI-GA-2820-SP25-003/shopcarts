@@ -44,35 +44,34 @@ def get_shopcarts_controller():
 
 
 def get_user_shopcart_controller(user_id):
-    """Gets the shopcart for a specific user id"""
-    app.logger.info("Request to get shopcart for user_id: '%s'", user_id)
-
     try:
-        try:
-            user_items = helpers.get_filtered_user_items(user_id)
-        except ValueError as ve:
-            return jsonify({"error": str(ve)}), status.HTTP_400_BAD_REQUEST
-
-        if not user_items:
-            return abort(
-                status.HTTP_404_NOT_FOUND, f"User with id '{user_id}' was not found."
-            )
-
+        # Extract filters from the request
+        item_filters = helpers.extract_item_filters(request.args)
         try:
             range_filters = helpers.extract_filters()
         except ValueError as ve:
             return jsonify({"error": str(ve)}), status.HTTP_400_BAD_REQUEST
 
-        filtered_items = helpers.apply_range_filters(user_items, range_filters)
+        # Retrieve the user's shopcart items via the model method
+        user_items = Shopcart.get_filtered_items(user_id, item_filters, range_filters)
 
-        user_list = [{"user_id": user_id, "items": []}]
-        for item in filtered_items:
-            user_list[0]["items"].append(item.serialize())
-        return jsonify(user_list), status.HTTP_200_OK
-    except HTTPException as e:
-        raise e
-    except Exception as e:  # pylint: disable=broad-except
-        app.logger.error(f"Error reading shopcart for user_id: '{user_id}'")
+        # If there are no items (None or empty list), return 404
+        if not user_items:
+            abort(status.HTTP_404_NOT_FOUND, f"User with id '{user_id}' not found.")
+
+        # Build the response with the found items
+        response = [
+            {"user_id": user_id, "items": [item.serialize() for item in user_items]}
+        ]
+        return jsonify(response), status.HTTP_200_OK
+
+    except HTTPException as http_e:
+        # Let HTTP exceptions (like abort(404)) propagate
+        raise http_e
+    except ValueError as ve:
+        return jsonify({"error": str(ve)}), status.HTTP_400_BAD_REQUEST
+    except Exception as e:
+        app.logger.error(f"Error reading shopcart for user_id: '{user_id}': {str(e)}")
         return (
             jsonify({"error": f"Internal server error: {str(e)}"}),
             status.HTTP_500_INTERNAL_SERVER_ERROR,

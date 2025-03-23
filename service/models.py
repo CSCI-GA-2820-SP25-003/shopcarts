@@ -386,3 +386,55 @@ class Shopcart(db.Model):
             item.delete()
 
         return total_price
+
+    @classmethod
+    def apply_range_filters(cls, items, range_filters):
+        """
+        Applies range-based filters (for quantity and price) to a list of items.
+        Returns a filtered list of items.
+        """
+        if not range_filters:
+            return items
+
+        filtered_items = []
+        for item in items:
+            # Check quantity range if present
+            if "min_qty" in range_filters and "max_qty" in range_filters:
+                if not (
+                    range_filters["min_qty"]
+                    <= item.quantity
+                    <= range_filters["max_qty"]
+                ):
+                    continue
+
+            # Check price range if present
+            if "min_price" in range_filters and "max_price" in range_filters:
+                price_val = float(item.price)
+                if not (
+                    range_filters["min_price"]
+                    <= price_val
+                    <= range_filters["max_price"]
+                ):
+                    continue
+
+            filtered_items.append(item)
+        return filtered_items
+
+    @classmethod
+    def get_filtered_items(cls, user_id, item_filters=None, range_filters=None):
+        if item_filters:
+            user_items = cls.find_by_user_id_with_filter(
+                user_id=user_id, filters=item_filters
+            )
+        else:
+            user_items = cls.find_by_user_id(user_id=user_id)
+
+        if user_items is None:
+            return None
+
+        if not user_items:
+            return []
+
+        if range_filters:
+            user_items = cls.apply_range_filters(user_items, range_filters)
+        return user_items
