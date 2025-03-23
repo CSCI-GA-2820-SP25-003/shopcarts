@@ -70,7 +70,7 @@ def get_user_shopcart_controller(user_id):
         raise http_e
     except ValueError as ve:
         return jsonify({"error": str(ve)}), status.HTTP_400_BAD_REQUEST
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         app.logger.error(f"Error reading shopcart for user_id: '{user_id}': {str(e)}")
         return (
             jsonify({"error": f"Internal server error: {str(e)}"}),
