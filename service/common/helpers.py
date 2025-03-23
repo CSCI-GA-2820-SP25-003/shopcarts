@@ -154,8 +154,8 @@ def extract_filters():
     ranges = [
         ("range_price", "min_price", "max_price", float, None),
         ("range_qty", "min_qty", "max_qty", int, None),
-        ("range_created_at", "min_date", "max_date", None, "%d-%m-%Y"),
-        ("range_last_updated", "min_update", "max_update", None, "%d-%m-%Y"),
+        ("range_created_at", "min_date", "max_date", None, "%Y-%m-%d"),
+        ("range_last_updated", "min_update", "max_update", None, "%Y-%m-%d"),
     ]
 
     for param, min_key, max_key, cast_type, date_format in ranges:
@@ -169,6 +169,23 @@ def extract_filters():
         if min_val is not None:
             filters[min_key] = min_val
             filters[max_key] = max_val
+
+    min_price = request.args.get("min-price")
+    max_price = request.args.get("max-price")
+
+    if max_price and min_price and float(min_price) > float(max_price):
+        raise ValueError("Min price larger than max price")
+
+    if max_price:
+        if "max_price" not in filters:
+            filters["max_price"] = float(max_price)
+        else:
+            raise ValueError("Passed in both range_price and max_price/min_price query")
+    if min_price:
+        if "min_price" not in filters:
+            filters["min_price"] = float(min_price)
+        else:
+            raise ValueError("Passed in both range_price and max_price/min_price query")
 
     return filters
 

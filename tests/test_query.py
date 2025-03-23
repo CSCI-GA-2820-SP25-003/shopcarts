@@ -20,6 +20,7 @@ TestYourResourceModel API Service Test Suite
 """
 
 # pylint: disable=duplicate-code
+from datetime import datetime, timezone, timedelta
 from service.common import status
 from .test_routes import TestShopcartService
 
