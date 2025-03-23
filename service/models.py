@@ -422,6 +422,7 @@ class Shopcart(db.Model):
 
     @classmethod
     def get_filtered_items(cls, user_id, item_filters=None, range_filters=None):
+        """Retrieve shopcart items for a given user using optional filters."""
         if item_filters:
             user_items = cls.find_by_user_id_with_filter(
                 user_id=user_id, filters=item_filters
