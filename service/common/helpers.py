@@ -226,3 +226,32 @@ def extract_item_filters(request_args):
                 raise ValueError(f"Error parsing filter for {field}: {str(e)}")
 
     return filters
+
+
+def apply_range_filters(items, range_filters):
+    """
+    Applies range-based filters (for quantity and price) to a list of items.
+    Returns a filtered list of items.
+    """
+    if not range_filters:
+        return items
+
+    filtered_items = []
+    for item in items:
+        # Check quantity range if present
+        if "min_qty" in range_filters and "max_qty" in range_filters:
+            if not (
+                range_filters["min_qty"] <= item.quantity <= range_filters["max_qty"]
+            ):
+                continue
+
+        # Check price range if present
+        if "min_price" in range_filters and "max_price" in range_filters:
+            price_val = float(item.price)
+            if not (
+                range_filters["min_price"] <= price_val <= range_filters["max_price"]
+            ):
+                continue
+
+        filtered_items.append(item)
+    return filtered_items

@@ -45,6 +45,37 @@ def get_shopcarts_controller():
     return jsonify(shopcarts_list), status.HTTP_200_OK
 
 
+# def apply_range_filters(items, range_filters):
+#     """
+#     Applies range-based filters (range_qty, range_price, etc.)
+#     to a list of Shopcart items. Returns a filtered list.
+#     """
+#     if not range_filters:
+#         return items  # No range filters provided
+
+#     filtered_items = []
+#     for item in items:
+#         # Check quantity range
+#         if "min_qty" in range_filters and "max_qty" in range_filters:
+#             if not (
+#                 range_filters["min_qty"] <= item.quantity <= range_filters["max_qty"]
+#             ):
+#                 continue
+
+#         # Check price range
+#         if "min_price" in range_filters and "max_price" in range_filters:
+#             price_val = float(item.price)
+#             if not (
+#                 range_filters["min_price"] <= price_val <= range_filters["max_price"]
+#             ):
+#                 continue
+
+#         # If it passes all checks, keep it
+#         filtered_items.append(item)
+
+#     return filtered_items
+
+
 def get_user_shopcart_controller(user_id):
     """Gets the shopcart for a specific user id"""
     app.logger.info("Request to get shopcart for user_id: '%s'", user_id)
@@ -67,30 +98,12 @@ def get_user_shopcart_controller(user_id):
                 status.HTTP_404_NOT_FOUND, f"User with id '{user_id}' was not found."
             )
 
-        range_filters = helpers.extract_filters()
+        try:
+            range_filters = helpers.extract_filters()
+        except ValueError as ve:
+            return jsonify({"error": str(ve)}), status.HTTP_400_BAD_REQUEST
 
-        filtered_items = []
-        for item in user_items:
-            # Check quantity range if present
-            if "min_qty" in range_filters and "max_qty" in range_filters:
-                if not (
-                    range_filters["min_qty"]
-                    <= item.quantity
-                    <= range_filters["max_qty"]
-                ):
-                    continue
-
-            # Check price range if present
-            if "min_price" in range_filters and "max_price" in range_filters:
-                price_val = float(item.price)
-                if not (
-                    range_filters["min_price"]
-                    <= price_val
-                    <= range_filters["max_price"]
-                ):
-                    continue
-
-            filtered_items.append(item)
+        filtered_items = helpers.apply_range_filters(user_items, range_filters)
 
         user_list = [{"user_id": user_id, "items": []}]
         for item in filtered_items:
