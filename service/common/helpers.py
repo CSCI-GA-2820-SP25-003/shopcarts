@@ -335,3 +335,25 @@ def test_parse_operator_value_edge_cases(self):
 
     with self.assertRaises(ValueError):
         parse_operator_value("~unknown~100")
+
+
+def test_extract_filters_with_range_operators(self):
+    """Test extract_item_filters with range operators"""
+    from service.common.helpers import extract_item_filters
+
+    # Test with valid price range filter
+    request_args = {"price_range": "10,50"}
+    filters = extract_item_filters(request_args)
+    self.assertEqual(filters["price"]["operator"], "range")
+    self.assertEqual(filters["price"]["value"], ["10", "50"])
+
+    # Test with invalid range format
+    request_args = {"price_range": "invalid-format"}
+    with self.assertRaises(ValueError):
+        extract_item_filters(request_args)
+
+    # Test with multiple comma-separated values (in operator)
+    request_args = {"price": "10,20,30"}
+    filters = extract_item_filters(request_args)
+    self.assertEqual(filters["price"]["operator"], "in")
+    self.assertEqual(filters["price"]["value"], ["10", "20", "30"])

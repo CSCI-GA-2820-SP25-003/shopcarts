@@ -3,10 +3,7 @@ Test Error Handlers
 """
 import json
 from unittest import TestCase
-from werkzeug.exceptions import (
-    BadRequest,
-    InternalServerError,
-)
+from unittest.mock import patch
 # Fix the import to get app from the correct location
 from service.routes import app  # Import from routes.py instead
 from service.common import status
@@ -57,12 +54,12 @@ class TestErrorHandlers(TestCase):
 
     def test_bad_request(self):
         """It should handle bad request errors"""
-        # Create a route that raises BadRequest
-        @app.route("/bad-request-test")
-        def bad_request_test():
-            raise BadRequest("Testing bad request error handler")
-
-        resp = self.app.get("/bad-request-test")
+        # Send a request that will trigger a 400 Bad Request
+        resp = self.app.post(
+            "/shopcarts",
+            json={"invalid": "data", "user_id": "not-an-integer"},
+            content_type="application/json",
+        )
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
         data = json.loads(resp.data)
         self.assertIn("status", data)
@@ -72,15 +69,12 @@ class TestErrorHandlers(TestCase):
 
     def test_internal_server_error(self):
         """It should handle internal server errors"""
-        # Create a route that raises an exception
-        @app.route("/server-error-test")
-        def server_error_test():
-            raise InternalServerError("Testing server error handler")
-
-        resp = self.app.get("/server-error-test")
-        self.assertEqual(resp.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
-        data = json.loads(resp.data)
-        self.assertIn("status", data)
-        self.assertEqual(data["status"], status.HTTP_500_INTERNAL_SERVER_ERROR)
-        self.assertIn("error", data)
-        self.assertEqual(data["error"], "Internal Server Error")
+        # We need to mock a service method to force a 500 error
+        with patch("service.models.Shopcart.all", side_effect=Exception("Database error")):
+            resp = self.app.get("/shopcarts")
+            self.assertEqual(resp.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+            data = json.loads(resp.data)
+            self.assertIn("status", data)
+            self.assertEqual(data["status"], status.HTTP_500_INTERNAL_SERVER_ERROR)
+            self.assertIn("error", data)
+            self.assertEqual(data["error"], "Internal Server Error")

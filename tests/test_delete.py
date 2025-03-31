@@ -189,6 +189,24 @@ class TestShopcartDelete(TestShopcartService):
             self.assertIn("error", data)
             self.assertIn("Database error", data["error"])
 
+    def test_delete_cart_item_error_during_find(self):
+        """It should handle errors during item find operations"""
+        user_id = 950
+        item_id = 951
+
+        # Create a shopcart item first
+        shopcart = self._populate_shopcarts(count=1, user_id=user_id)
+        item_id = shopcart[0].item_id
+
+        # Mock find_by_user_id to return items (so it passes the user check)
+        # but make the specific item.find fail with an exception
+        with patch('service.models.Shopcart.find', side_effect=Exception("Find operation failed")):
+            response = self.client.delete(f"/shopcarts/{user_id}/items/{item_id}")
+            self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+            data = response.get_json()
+            self.assertIn("error", data)
+            self.assertIn("Find operation failed", data["error"])
+
     ######################################################################
     #  Database Connection Error Testcase
     ######################################################################
@@ -196,7 +214,7 @@ class TestShopcartDelete(TestShopcartService):
     def test_database_connection_error(self):
         """It should handle database connection errors"""
         with patch("service.models.Shopcart.all", side_effect=DatabaseConnectionError("DB connection error")):
-            resp = self.app.get("/shopcarts")
+            resp = self.client.get("/shopcarts")
             self.assertEqual(resp.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
             data = json.loads(resp.data)
             self.assertIn("status", data)

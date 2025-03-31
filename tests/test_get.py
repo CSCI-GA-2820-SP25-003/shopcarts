@@ -520,7 +520,7 @@ class TestShopcartGet(TestShopcartService):
     def test_bad_request(self):
         """It should handle bad request errors"""
         # Send a request that will trigger a 400 Bad Request
-        resp = self.app.post(
+        resp = self.client.post(
             "/shopcarts",
             json={"invalid": "data", "user_id": "not-an-integer"},
             content_type="application/json",
@@ -535,9 +535,8 @@ class TestShopcartGet(TestShopcartService):
     def test_internal_server_error(self):
         """It should handle internal server errors"""
         # We'll mock a method to force a 500 error
-
         with patch("service.models.Shopcart.all", side_effect=Exception("Database error")):
-            resp = self.app.get("/shopcarts")
+            resp = self.client.get("/shopcarts")
             self.assertEqual(resp.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
             data = json.loads(resp.data)
             self.assertIn("status", data)

@@ -2,7 +2,6 @@
 DELETE Controller logic for Shopcart Service
 """
 
-from unittest.mock import patch
 from flask import jsonify
 from flask import current_app as app
 from service.models import Shopcart
@@ -70,45 +69,3 @@ def delete_shopcart_item_controller(user_id, item_id):
             jsonify({"error": f"Internal server error: {str(e)}"}),
             status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
-
-
-def test_read_user_shopcart_server_error(self):
-    """Read by user_id should handle server errors gracefully"""
-    self._populate_shopcarts(count=1, user_id=1)
-    # Use a different patch point that will definitely be called in get_controller
-    with patch(
-        "service.models.Shopcart.find_by_user_id_with_filter",
-        side_effect=Exception("Database error"),
-    ):
-        resp = self.client.get("/shopcarts/1")
-        self.assertEqual(resp.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
-        data = resp.get_json()
-        self.assertIn("error", data)
-        self.assertIn("Database error", data["error"])
-
-
-def test_delete_shopcart_with_error_during_delete(self):
-    """It should handle delete errors during shopcart deletion"""
-    user_id = 800
-    # Create test data
-    items = self._populate_shopcarts(count=2, user_id=user_id)
-
-    # Mock the delete method to raise an exception
-    with patch.object(
-        Shopcart,
-        'delete',
-        side_effect=Exception("Database delete error")
-    ):
-        # Send delete request
-        response = self.client.delete(f"/shopcarts/{user_id}")
-
-        # Verify response
-        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
-        data = response.get_json()
-        self.assertIn("error", data)
-        self.assertIn("Database delete error", data["error"])
-
-        # Verify items still exist
-        for item in items:
-            found = Shopcart.find(user_id, item.item_id)
-            self.assertIsNotNone(found)

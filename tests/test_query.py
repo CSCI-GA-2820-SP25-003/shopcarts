@@ -375,3 +375,15 @@ class TestQuery(TestShopcartService):
         data = resp.get_json()
         self.assertIn("error", data)
         self.assertIn("Min price larger than max price", data["error"])
+
+    def test_extract_filters_validation(self):
+        """It should validate and handle edge cases in extract_item_filters"""
+        # Test with malformed range where min > max
+        with self.assertRaises(ValueError):
+            response = self.client.get("/shopcarts/1?price_range=100,50")
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # Test with non-numeric values in range
+        with self.assertRaises(ValueError):
+            response = self.client.get("/shopcarts/1?price_range=abc,xyz")
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
