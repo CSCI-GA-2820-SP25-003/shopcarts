@@ -277,8 +277,34 @@ def extract_item_filters(request_args):
     # Validate price range
     filters = _validate_price_range(filters)
 
-    # Process operator-based filters
-    operator_filters = _process_operator_filters(request_args, filter_fields)
-    filters.update(operator_filters)
+    for field in filter_fields:
+        range_key = f"{field}_range"
+
+        # Handle range filters like quantity_range=1,10
+        if range_key in request_args:
+            value_string = request_args[range_key]
+            try:
+                start, end = map(str.strip, value_string.split(","))
+                filters[field] = {"operator": "range", "value": [start, end]}
+            except ValueError:
+                raise ValueError(
+                    f"Invalid range format for {range_key}: expected start,end"
+                )
+
+        elif field in request_args:
+            value_string = request_args[field]
+
+            # Handle comma-separated values → "in" filter
+            if "," in value_string:
+                values = [v.strip() for v in value_string.split(",")]
+                filters[field] = {"operator": "in", "value": values}
+
+            # Handle operator-based filters like gte:5
+            else:
+                try:
+                    operator, value = parse_operator_value(value_string)
+                    filters[field] = {"operator": operator, "value": value}
+                except ValueError as e:
+                    raise ValueError(f"Error parsing filter for {field}: {str(e)}")
 
     return filters
