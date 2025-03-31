@@ -6,6 +6,12 @@ from service.common import error_handlers, status
 from service.common.error_handlers import internal_server_error
 
 
+# Define a custom exception for testing
+class TestServiceError(Exception):
+    """Custom exception for testing error handlers."""
+    pass
+
+
 class TestErrorHandlersExtra(unittest.TestCase):
     """Test cases for direct exercise of error handler functions to improve coverage."""
 
@@ -18,7 +24,7 @@ class TestErrorHandlersExtra(unittest.TestCase):
 
     def test_internal_server_error_handler_direct(self):
         """Directly call internal_server_error handler with a dummy exception."""
-        error = Exception("Test error")
+        error = TestServiceError("Test error")  # Use our custom exception
         # Call the handler directly.
         response, status_code = internal_server_error(error)
         self.assertEqual(status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -31,8 +37,8 @@ class TestErrorHandlersExtra(unittest.TestCase):
         # Cause an exception by requesting an unknown route in our test app.
         @self.app.route("/trigger-error")
         def trigger_error():
-            # Use our own exception directly instead of Werkzeug's
-            raise Exception("Triggered error")
+            # Use our custom exception instead of the general Exception
+            raise TestServiceError("Triggered error")
 
         resp = self.client.get("/trigger-error")
         self.assertEqual(resp.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
