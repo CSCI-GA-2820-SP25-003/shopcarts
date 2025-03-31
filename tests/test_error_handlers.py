@@ -127,7 +127,7 @@ class TestErrorHandlers(TestCase):
 
             def get_message(self):
                 """Additional method to avoid too-few-public-methods linting error."""
-                return self.__str__()
+                return str(self)  # Use str() built-in function instead of calling __str__() directly
 
         custom_error = CustomError()
         response, status_code = error_handlers.bad_request(custom_error)
