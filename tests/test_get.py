@@ -21,6 +21,7 @@ TestYourResourceModel API Service Test Suite
 
 # pylint: disable=duplicate-code
 from decimal import Decimal  # Move standard library import to the top
+import json
 from unittest.mock import patch
 from service.common import status  # First-party imports come after standard library
 from .test_routes import TestShopcartService  # Local imports come last
@@ -270,7 +271,6 @@ class TestShopcartGet(TestShopcartService):
         self.assertEqual(len(data[0]["items"]), 3)
 
         for shopcart in shopcart_items:
-
             response_item = next(
                 (
                     item
@@ -295,8 +295,8 @@ class TestShopcartGet(TestShopcartService):
             self.assertAlmostEqual(float(response_item["price"]), float(shopcart.price))
 
             # Ensure timestamps exist
-            self.assertNotIn("created_at", response_item)
-            self.assertNotIn("last_updated", response_item)
+            self.assertIn("created_at", response_item)
+            self.assertIn("last_updated", response_item)
 
     def test_get_empty_user_shopcart_items(self):
         """It should return an 404 when a user has no items"""
@@ -510,3 +510,36 @@ class TestShopcartGet(TestShopcartService):
         data = response.get_json()
         self.assertIn("error", data)
         self.assertIn("Invalid min-price format", data["error"])
+
+    ######################################################################
+    #  Test Cases for Error Handling
+    ######################################################################
+
+    def test_bad_request(self):
+        """It should handle bad request errors"""
+        # Send a request that will trigger a 400 Bad Request
+        resp = self.app.post(
+            "/shopcarts",
+            json={"invalid": "data", "user_id": "not-an-integer"},
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        data = json.loads(resp.data)
+        self.assertIn("status", data)
+        self.assertEqual(data["status"], status.HTTP_400_BAD_REQUEST)
+        self.assertIn("error", data)
+        self.assertEqual(data["error"], "Bad Request")
+
+    def test_internal_server_error(self):
+        """It should handle internal server errors"""
+        # We'll mock a method to force a 500 error
+        from unittest.mock import patch
+
+        with patch("service.models.Shopcart.all", side_effect=Exception("Database error")):
+            resp = self.app.get("/shopcarts")
+            self.assertEqual(resp.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+            data = json.loads(resp.data)
+            self.assertIn("status", data)
+            self.assertEqual(data["status"], status.HTTP_500_INTERNAL_SERVER_ERROR)
+            self.assertIn("error", data)
+            self.assertEqual(data["error"], "Internal Server Error")

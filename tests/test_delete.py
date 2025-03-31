@@ -20,6 +20,7 @@ TestYourResourceModel API Service Test Suite
 """
 
 # pylint: disable=duplicate-code
+import json
 from unittest.mock import patch
 from service.common import status
 from .test_routes import TestShopcartService
@@ -170,3 +171,33 @@ class TestShopcartDelete(TestShopcartService):
             data = response.get_json()
             self.assertIn("error", data)
             self.assertEqual(data["error"], "Internal server error: Database error")
+
+    def test_delete_shopcart_item_with_error(self):
+        """It should handle database errors when deleting items"""
+        user_id = 900
+        item_id = 901
+        self._populate_shopcarts(count=1, user_id=user_id, item_id=item_id)
+
+        # Mock the find method to simulate a database error
+        with patch('service.models.Shopcart.find', side_effect=Exception("Database error")):
+            response = self.client.delete(f"/shopcarts/{user_id}/items/{item_id}")
+            self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+            data = response.get_json()
+            self.assertIn("error", data)
+            self.assertIn("Database error", data["error"])
+
+    ######################################################################
+    #  Database Connection Error Testcase
+    ######################################################################
+
+    def test_database_connection_error(self):
+        """It should handle database connection errors"""
+        from service.models import DatabaseConnectionError
+        with patch("service.models.Shopcart.all", side_effect=DatabaseConnectionError("DB connection error")):
+            resp = self.app.get("/shopcarts")
+            self.assertEqual(resp.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+            data = json.loads(resp.data)
+            self.assertIn("status", data)
+            self.assertEqual(data["status"], status.HTTP_503_SERVICE_UNAVAILABLE)
+            self.assertIn("error", data)
+            self.assertEqual(data["error"], "Service Unavailable")

@@ -308,3 +308,30 @@ def extract_item_filters(request_args):
                     raise ValueError(f"Error parsing filter for {field}: {str(e)}")
 
     return filters
+
+
+def test_parse_operator_value_edge_cases(self):
+    """Test parse_operator_value with edge cases"""
+    from service.common.helpers import parse_operator_value
+
+    # Test with valid basic operator
+    operator, value = parse_operator_value("eq:100")
+    self.assertEqual(operator, "eq")
+    self.assertEqual(value, "100")
+
+    # Test with valid wrapped operator
+    operator, value = parse_operator_value("~gt~50")
+    self.assertEqual(operator, "gt")
+    self.assertEqual(value, "50")
+
+    # Test with no operator (defaults to eq)
+    operator, value = parse_operator_value("200")
+    self.assertEqual(operator, "eq")
+    self.assertEqual(value, "200")
+
+    # Test with invalid formats
+    with self.assertRaises(ValueError):
+        parse_operator_value("invalid~format")
+
+    with self.assertRaises(ValueError):
+        parse_operator_value("~unknown~100")
