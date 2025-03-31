@@ -73,12 +73,7 @@ def get_user_shopcart_controller(user_id):
         return jsonify({"error": str(e)}), status.HTTP_400_BAD_REQUEST
     except HTTPException as e:
         return jsonify({"error": str(e)}), e.code
-    except (TypeError, AttributeError) as e:
-        # More specific exception handling for common data errors
-        app.logger.error("Data error: %s", str(e))
-        return jsonify({"error": f"Data error: {str(e)}"}), status.HTTP_500_INTERNAL_SERVER_ERROR
     except Exception as e:  # pylint: disable=broad-except
-        # Intentionally broad to catch any unexpected database or serialization errors
         app.logger.error("Unexpected error: %s", str(e))
         return jsonify({"error": f"Internal server error: {str(e)}"}), status.HTTP_500_INTERNAL_SERVER_ERROR
 
@@ -99,17 +94,12 @@ def get_user_shopcart_items_controller(user_id):
         shopcarts_list = []
         shopcarts_list.append({
             "user_id": user_id,
-            "items": [item.serialize_without_timestamps() for item in shopcart_items]
+            "items": [item.serialize() for item in shopcart_items]
         })
 
         return jsonify(shopcarts_list), status.HTTP_200_OK
 
-    except ValueError as e:
-        return jsonify({"error": str(e)}), status.HTTP_400_BAD_REQUEST
-    except HTTPException as e:
-        return jsonify({"error": str(e)}), e.code
     except Exception as e:  # pylint: disable=broad-except
-        # Intentionally broad to catch any unexpected database or serialization errors
         app.logger.error("Error reading items for user_id: '%s': %s", user_id, str(e))
         return jsonify({"error": f"Internal server error: {str(e)}"}), status.HTTP_500_INTERNAL_SERVER_ERROR
 
