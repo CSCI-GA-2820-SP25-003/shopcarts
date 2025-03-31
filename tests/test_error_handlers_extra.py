@@ -3,9 +3,12 @@
 import unittest
 from flask import Flask
 from service.common import error_handlers, status
+from service.common.error_handlers import internal_server_error
 
 
 class TestErrorHandlersExtra(unittest.TestCase):
+    """Test cases for direct exercise of error handler functions to improve coverage."""
+
     def setUp(self):
         self.app = Flask(__name__)
         self.app.config["TESTING"] = True
@@ -17,8 +20,6 @@ class TestErrorHandlersExtra(unittest.TestCase):
 
     def test_internal_server_error_handler_direct(self):
         """Directly call internal_server_error handler with a dummy exception."""
-        # Import the internal_server_error function
-        from service.common.error_handlers import internal_server_error
         error = Exception("Test error")
         # Call the handler directly.
         response, status_code = internal_server_error(error)
@@ -32,7 +33,9 @@ class TestErrorHandlersExtra(unittest.TestCase):
         # Cause an exception by requesting an unknown route in our test app.
         @self.app.route("/trigger-error")
         def trigger_error():
-            raise Exception("Triggered error")
+            # Use a more specific exception type to avoid broad exception warning
+            from werkzeug.exceptions import InternalServerError
+            raise InternalServerError("Triggered error")
 
         resp = self.client.get("/trigger-error")
         self.assertEqual(resp.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)

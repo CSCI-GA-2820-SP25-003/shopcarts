@@ -5,6 +5,8 @@ from service.common import helpers
 
 
 class TestHelpersExtra(unittest.TestCase):
+    """Test cases for additional helper function scenarios to improve coverage."""
+
     def test_parse_operator_value_eq(self):
         """Test parse_operator_value for 'eq' operator."""
         # Expected behavior: if string contains "eq:100", then operator is 'eq' and value "100"
