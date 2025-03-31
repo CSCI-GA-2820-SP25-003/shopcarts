@@ -84,6 +84,35 @@ class TestHelpersExtra(unittest.TestCase):
         helpers.apply_filter("price", value, filters)
         self.assertEqual(filters["price"]["operator"], "lte")
 
+    def test_extract_filters_with_multiple_conditions(self):
+        """Test extract_item_filters with multiple filters."""
+        # Test with multiple filters
+        args = {
+            "price": "10.99",
+            "quantity": "gt:5",
+            "description": "Test"
+        }
+        filters = helpers.extract_item_filters(args)
+        self.assertIn("price", filters)
+        self.assertIn("quantity", filters)
+        self.assertIn("description", filters)
+        self.assertEqual(filters["price"]["operator"], "eq")
+        self.assertEqual(filters["quantity"]["operator"], "gt")
+
+    def test_extract_filters_with_invalid_date_format(self):
+        """Test extract_item_filters with invalid date format."""
+        # Test with invalid date format
+        args = {"created_at": "invalid-date-format"}
+        with self.assertRaises(ValueError):
+            helpers.extract_item_filters(args)
+
+    def test_filter_extraction_with_complex_operators(self):
+        """Test complex operator extraction."""
+        args = {"price": "~gte~50"}
+        filters = helpers.extract_item_filters(args)
+        self.assertEqual(filters["price"]["operator"], "gte")
+        self.assertEqual(filters["price"]["value"], "50")
+
 
 if __name__ == '__main__':
     unittest.main()
