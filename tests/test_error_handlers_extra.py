@@ -13,8 +13,6 @@ class TestErrorHandlersExtra(unittest.TestCase):
         self.app = Flask(__name__)
         self.app.config["TESTING"] = True
         # Register the error handlers defined in error_handlers.py.
-        # If your error_handlers module is automatic (using @app.errorhandler) and
-        # uses the current_app, ensure we set up an app context.
         self.app.register_error_handler(Exception, error_handlers.handle_general_exception)
         self.client = self.app.test_client()
 
@@ -33,9 +31,8 @@ class TestErrorHandlersExtra(unittest.TestCase):
         # Cause an exception by requesting an unknown route in our test app.
         @self.app.route("/trigger-error")
         def trigger_error():
-            # Use a more specific exception type to avoid broad exception warning
-            from werkzeug.exceptions import InternalServerError  # type: ignore
-            raise InternalServerError("Triggered error")
+            # Use our own exception directly instead of Werkzeug's
+            raise Exception("Triggered error")
 
         resp = self.client.get("/trigger-error")
         self.assertEqual(resp.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
