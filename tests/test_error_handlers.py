@@ -3,10 +3,11 @@ Test Error Handlers
 """
 import json
 from unittest import TestCase
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 # Fix the import to get app from the correct location
 from service.routes import app  # Import from routes.py instead
-from service.common import status
+from service.common import status, error_handlers
+from service.models import DataValidationError
 
 
 class TestErrorHandlers(TestCase):
@@ -72,3 +73,56 @@ class TestErrorHandlers(TestCase):
             data = json.loads(resp.data)
             # Expect the error handler to wrap the exception with a uniform message:
             self.assertEqual(data["error"], "Internal Server Error")
+
+    def test_database_connection_error(self):
+        """It should handle database connection errors"""
+        with patch("service.controllers.get_controller.Shopcart.all",
+                   side_effect=error_handlers.DatabaseConnectionError("DB Connection Error")):
+            resp = self.app.get("/shopcarts")
+            self.assertEqual(resp.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+            data = json.loads(resp.data)
+            self.assertEqual(data["error"], "Service Unavailable")
+            self.assertEqual(data["message"], "DB Connection Error")
+
+    # Direct tests for error handler functions to increase coverage
+    def test_method_not_allowed_direct(self):
+        """Test direct call to method_not_allowed handler (covers line 36)"""
+        # Create a mock error with a description
+        mock_error = MagicMock()
+        mock_error.description = "Method not allowed test"
+
+        # Call the handler function directly
+        response, status_code = error_handlers.method_not_supported(mock_error)
+
+        # Verify the response
+        self.assertEqual(status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        data = json.loads(response.get_data(as_text=True))
+        self.assertEqual(data["error"], "Method not Allowed")
+        self.assertEqual(data["message"], "Method not allowed test")
+
+    def test_bad_request_direct(self):
+        """Test direct call to bad_request handler (covers lines 42-44)"""
+        # Test with a string error
+        response, status_code = error_handlers.bad_request("Simple error")
+        self.assertEqual(status_code, status.HTTP_400_BAD_REQUEST)
+        data = json.loads(response.get_data(as_text=True))
+        self.assertEqual(data["error"], "Bad Request")
+        self.assertEqual(data["message"], "Simple error")
+
+        # Test with a DataValidationError (to cover the request_validation_error handler)
+        validation_error = DataValidationError("Invalid data format")
+        response, status_code = error_handlers.request_validation_error(validation_error)
+        self.assertEqual(status_code, status.HTTP_400_BAD_REQUEST)
+        data = json.loads(response.get_data(as_text=True))
+        self.assertEqual(data["message"], "Invalid data format")
+
+        # Test with a different error object
+        class CustomError:
+            def __str__(self):
+                return "Custom error message"
+
+        custom_error = CustomError()
+        response, status_code = error_handlers.bad_request(custom_error)
+        self.assertEqual(status_code, status.HTTP_400_BAD_REQUEST)
+        data = json.loads(response.get_data(as_text=True))
+        self.assertEqual(data["message"], "Custom error message")
