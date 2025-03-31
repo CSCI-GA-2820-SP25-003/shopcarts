@@ -38,8 +38,10 @@ class TestLogHandlers(unittest.TestCase):
 
     def test_init_logging(self):
         """Test log handler initialization"""
-        logger = log_handlers.init_logging("test_module")
+        # Correctly call init_logging with the required parameter
+        logger = log_handlers.init_logging("test_module", "INFO")
         self.assertIsNotNone(logger)
+        # Now use the logger (don't assign the result since info() doesn't return anything)
         logger.info("Test log message")  # This should exercise line 35
 
 
