@@ -22,6 +22,11 @@ from service.models import DataValidationError
 from . import status
 
 
+class DatabaseConnectionError(Exception):
+    """Exception raised when there is an error connecting to the database"""
+    pass
+
+
 ######################################################################
 # Error Handlers
 ######################################################################
@@ -97,4 +102,19 @@ def internal_server_error(error):
             message=message,
         ),
         status.HTTP_500_INTERNAL_SERVER_ERROR,
+    )
+
+
+@app.errorhandler(DatabaseConnectionError)
+def database_connection_error(error):
+    """Handles database connection errors with 503_SERVICE_UNAVAILABLE"""
+    message = str(error)
+    app.logger.critical("Database connection error: %s", message)
+    return (
+        jsonify(
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            error="Service Unavailable",
+            message=message
+        ),
+        status.HTTP_503_SERVICE_UNAVAILABLE
     )
