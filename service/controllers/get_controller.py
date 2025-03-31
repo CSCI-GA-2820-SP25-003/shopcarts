@@ -75,19 +75,9 @@ def get_user_shopcart_controller(user_id):
         app.logger.error("Data error: %s", str(e))
         return jsonify({"error": f"Data error: {str(e)}"}), status.HTTP_500_INTERNAL_SERVER_ERROR
     except Exception as e:  # pylint: disable=broad-except
-        # Add a comment explaining why we're catching a broad exception here
-        # This is intentional to prevent any unexpected errors from crashing the API
+        # Intentionally broad to catch any unexpected database or serialization errors
         app.logger.error("Unexpected error: %s", str(e))
         return jsonify({"error": f"Internal server error: {str(e)}"}), status.HTTP_500_INTERNAL_SERVER_ERROR
-    except HTTPException as e:
-        raise e
-    except Exception as e:  # pylint: disable=broad-except
-        # Intentionally broad to catch any unexpected database or serialization errors
-        app.logger.error(f"Error reading items for user_id: '{user_id}'")
-        return (
-            jsonify({"error": f"Internal server error: {str(e)}"}),
-            status.HTTP_500_INTERNAL_SERVER_ERROR,
-        )
 
 
 def get_user_shopcart_items_controller(user_id):
