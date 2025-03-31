@@ -7,7 +7,8 @@ from werkzeug.exceptions import (
     BadRequest,
     InternalServerError,
 )
-from service import app
+# Fix the import to get app from the correct location
+from service.routes import app  # Import from routes.py instead
 from service.common import status
 
 
