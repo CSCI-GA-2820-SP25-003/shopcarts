@@ -23,8 +23,9 @@ TestYourResourceModel API Service Test Suite
 import json
 from unittest.mock import patch
 from service.common import status
+from service.models import Shopcart
+from service.common.error_handlers import DatabaseConnectionError
 from .test_routes import TestShopcartService
-from service.models import DatabaseConnectionError
 
 
 ######################################################################
