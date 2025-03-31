@@ -525,7 +525,8 @@ class TestShopcartGet(TestShopcartService):
         )
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
         data = resp.get_json()
-        self.assertEqual(data["error"], "Bad Request")
+        # Updated expected error message:
+        self.assertEqual(data["error"], "Invalid input: 'product_id'")
 
     def test_internal_server_error(self):
         """It should handle internal server errors"""
