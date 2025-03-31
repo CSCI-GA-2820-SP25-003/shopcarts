@@ -60,7 +60,7 @@ class TestErrorHandlers(TestCase):
             json={"invalid": "data", "user_id": "not-an-integer"},
             content_type="application/json",
         )
-        self.assertEqual(resp.status_code, status.HTTP_405_BAD_REQUEST)
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
         data = json.loads(resp.data)
         self.assertIn("status", data)
         self.assertEqual(data["status"], status.HTTP_400_BAD_REQUEST)
