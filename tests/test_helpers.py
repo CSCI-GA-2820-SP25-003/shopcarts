@@ -8,20 +8,25 @@ from service.common import helpers
 
 # Create a dummy Shopcart class for testing cart functions
 class DummyShopcart:
+    """Mock Shopcart class for testing cart-related helper functions."""
+
     def __init__(self, user_id, item_id, quantity):
+        """Initialize the mock Shopcart with required attributes."""
         self.user_id = user_id
         self.item_id = item_id
         self.quantity = quantity
 
     def update(self):
+        """Mock update method."""
         pass
 
     def delete(self):
+        """Mock delete method."""
         pass
 
 
-class TestHelpers(unittest.TestCase):
-    """Test cases for helper functions in service.common.helpers."""
+class TestHelpersBase(unittest.TestCase):
+    """Base test case class for helper functions with common setup."""
 
     def setUp(self):
         """Set up test fixtures."""
@@ -29,9 +34,10 @@ class TestHelpers(unittest.TestCase):
         self.app.config["TESTING"] = True
         self.client = self.app.test_client()
 
-    #########################################################################
-    # Tests for extract_item_filters
-    #########################################################################
+
+class TestExtractItemFilters(TestHelpersBase):
+    """Test cases for extract_item_filters function."""
+
     def test_extract_item_filters_valid_range(self):
         """Test that extract_item_filters returns correct output for a valid price range."""
         args = {"price_range": "10,50"}
@@ -179,9 +185,10 @@ class TestHelpers(unittest.TestCase):
         self.assertEqual(filters["price_min"], 5.0)
         self.assertEqual(filters["price_max"], 100.0)
 
-    #########################################################################
-    # Tests for parse_operator_value
-    #########################################################################
+
+class TestParseOperatorValue(TestHelpersBase):
+    """Test cases for parse_operator_value function."""
+
     def test_parse_operator_value_eq(self):
         """Test parse_operator_value with equality operator"""
         # Special format "eq:100" returns "eq" operator with value eq:100
@@ -240,9 +247,10 @@ class TestHelpers(unittest.TestCase):
         # Value with embedded tildes (more complex case)
         self.assertEqual(helpers.parse_operator_value("~gt~10~with~tildes"), ("gt", "10~with~tildes"))
 
-    #########################################################################
-    # Tests for validate_request_data
-    #########################################################################
+
+class TestValidateRequestData(TestHelpersBase):
+    """Test cases for validate_request_data function."""
+
     def test_validate_request_data_error_cases(self):
         """Test validate_request_data with various error cases (line 139, 156)."""
         # Missing required product_id
@@ -300,9 +308,10 @@ class TestHelpers(unittest.TestCase):
                 "purchase_limit": "invalid"
             })
 
-    #########################################################################
-    # Tests for _process_operator_filters
-    #########################################################################
+
+class TestProcessOperatorFilters(TestHelpersBase):
+    """Test cases for _process_operator_filters function."""
+
     def test_process_operator_filters_all_branches(self):
         """Test _process_operator_filters through all branches (lines 242-264)."""
         # Test with fields both in args and filter_fields
@@ -355,9 +364,10 @@ class TestHelpers(unittest.TestCase):
         filters = helpers._process_operator_filters(args, filter_fields)
         self.assertEqual(filters, {})
 
-    #########################################################################
-    # Tests for validate_price_parameter and _validate_price_range
-    #########################################################################
+
+class TestPriceParameters(TestHelpersBase):
+    """Test cases for price parameter helper functions."""
+
     def test_validate_price_parameter(self):
         """Test _validate_price_parameter function"""
         filters = {}
