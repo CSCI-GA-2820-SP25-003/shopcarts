@@ -1,0 +1,258 @@
+"""
+Comprehensive tests for helper functions in service/common/helpers.py
+"""
+
+import unittest
+import json
+from flask import Flask, jsonify
+from service.common import helpers, status
+from service.models import Shopcart
+
+# Create a dummy Shopcart class for testing cart functions
+class DummyShopcart:
+    def __init__(self, user_id, item_id, quantity):
+        self.user_id = user_id
+        self.item_id = item_id
+        self.quantity = quantity
+
+    def update(self):
+        pass
+
+    def delete(self):
+        pass
+
+# --------------------- Test validate_request_data ---------------------
+class TestValidateRequestData(unittest.TestCase):
+    def test_valid_data(self):
+        data = {
+            "product_id": "123",
+            "quantity": "2",
+            "name": "Test Product",
+            "price": "9.99",
+            "stock": "10",
+            "purchase_limit": "5"
+        }
+        result = helpers.validate_request_data(data)
+        self.assertEqual(result, (123, 2, "Test Product", 9.99, 10, 5))
+
+    def test_missing_required_field(self):
+        data = {
+            "quantity": "2",
+            "name": "Test Product",
+            "price": "9.99"
+        }
+        with self.assertRaises(ValueError) as cm:
+            helpers.validate_request_data(data)
+        self.assertIn("Invalid input", str(cm.exception))
+
+# --------------------- Test validate_stock_and_limits ---------------------
+class TestValidateStockAndLimits(unittest.TestCase):
+    def test_out_of_stock(self):
+        response = helpers.validate_stock_and_limits(1, 0, None)
+        self.assertEqual(response[1], status.HTTP_400_BAD_REQUEST)
+        data = json.loads(response[0].data)
+        self.assertEqual(data["error"], "Product is out of stock")
+
+    def test_exceeds_stock(self):
+        response = helpers.validate_stock_and_limits(5, 3, None)
+        self.assertEqual(response[1], status.HTTP_400_BAD_REQUEST)
+        data = json.loads(response[0].data)
+        self.assertIn("Only 3 units", data["error"])
+
+    def test_exceeds_purchase_limit(self):
+        response = helpers.validate_stock_and_limits(6, None, 5)
+        self.assertEqual(response[1], status.HTTP_400_BAD_REQUEST)
+        data = json.loads(response[0].data)
+        self.assertIn("Cannot exceed purchase limit", data["error"])
+
+    def test_valid_stock_and_limits(self):
+        response = helpers.validate_stock_and_limits(3, 10, 10)
+        self.assertIsNone(response)
+
+# --------------------- Test update_or_create_cart_item ---------------------
+class TestUpdateOrCreateCartItem(unittest.TestCase):
+    def setUp(self):
+        # Monkey-patch Shopcart methods
+        self.original_find = Shopcart.find
+        self.original_create = Shopcart.create
+        self.original_update = Shopcart.update
+        Shopcart.find = lambda user_id, product_id: None
+        Shopcart.create = lambda self: None
+        Shopcart.find_by_user_id = classmethod(lambda cls, user_id: ["dummy"])
+    
+    def tearDown(self):
+        Shopcart.find = self.original_find
+        Shopcart.create = self.original_create
+        Shopcart.update = self.original_update
+
+    def test_create_new_item(self):
+        product_data = {
+            "product_id": 1,
+            "quantity": 2,
+            "name": "Test",
+            "price": 10.0,
+            "stock": None,
+            "purchase_limit": None
+        }
+        result = helpers.update_or_create_cart_item(1, product_data)
+        self.assertEqual(result, ["dummy"])
+
+    def test_update_existing_item(self):
+        dummy = DummyShopcart(1, 1, 3)
+        Shopcart.find = lambda user_id, product_id: dummy
+        dummy.update = lambda: None
+        product_data = {
+            "product_id": 1,
+            "quantity": 2,
+            "name": "Test",
+            "price": 10.0,
+            "stock": 10,
+            "purchase_limit": 10
+        }
+        result = helpers.update_or_create_cart_item(1, product_data)
+        self.assertEqual(dummy.quantity, 5)  # 3 + 2
+        self.assertEqual(result, ["dummy"])
+    
+    def test_update_exceeds_limits(self):
+        dummy = DummyShopcart(1, 1, 5)
+        Shopcart.find = lambda user_id, product_id: dummy
+        product_data = {
+            "product_id": 1,
+            "quantity": 10,
+            "name": "Test",
+            "price": 10.0,
+            "stock": 10,
+            "purchase_limit": 20
+        }
+        with self.assertRaises(ValueError) as cm:
+            helpers.update_or_create_cart_item(1, product_data)
+        self.assertIn("Only 10 units", str(cm.exception))
+
+# --------------------- Test validate_items_list ---------------------
+class TestValidateItemsList(unittest.TestCase):
+    def test_valid_items(self):
+        data = {"items": [1, 2, 3]}
+        items = helpers.validate_items_list(data)
+        self.assertEqual(items, [1, 2, 3])
+
+    def test_invalid_items(self):
+        data = {"items": "not a list"}
+        with self.assertRaises(ValueError):
+            helpers.validate_items_list(data)
+        data = {}
+        with self.assertRaises(ValueError):
+            helpers.validate_items_list(data)
+
+# --------------------- Test process_cart_updates ---------------------
+class TestProcessCartUpdates(unittest.TestCase):
+    def test_valid_updates(self):
+        calls = []
+        def dummy_helper(user_id, item_id, quantity):
+            calls.append((user_id, item_id, quantity))
+        original_helper = helpers.update_cart_item_helper
+        helpers.update_cart_item_helper = dummy_helper
+        items = [{"item_id": "1", "quantity": "5"}, {"item_id": "2", "quantity": "10"}]
+        helpers.process_cart_updates(1, items)
+        self.assertEqual(calls, [(1, 1, 5), (1, 2, 10)])
+        helpers.update_cart_item_helper = original_helper
+
+    def test_invalid_item_structure(self):
+        with self.assertRaises(ValueError):
+            helpers.process_cart_updates(1, [{}])
+    
+    def test_negative_quantity(self):
+        with self.assertRaises(ValueError):
+            helpers.process_cart_updates(1, [{"item_id": "1", "quantity": "-5"}])
+
+# --------------------- Test update_cart_item_helper ---------------------
+class TestUpdateCartItemHelper(unittest.TestCase):
+    def setUp(self):
+        self.original_find = Shopcart.find
+    def tearDown(self):
+        Shopcart.find = self.original_find
+
+    def test_item_not_found(self):
+        Shopcart.find = lambda user_id, item_id: None
+        with self.assertRaises(LookupError):
+            helpers.update_cart_item_helper(1, 999, 5)
+
+    def test_delete_item(self):
+        dummy = DummyShopcart(1, 100, 10)
+        dummy.delete = lambda: setattr(dummy, 'deleted', True)
+        Shopcart.find = lambda user_id, item_id: dummy
+        helpers.update_cart_item_helper(1, 100, 0)
+        self.assertTrue(hasattr(dummy, 'deleted'))
+
+    def test_update_item(self):
+        dummy = DummyShopcart(1, 100, 5)
+        dummy.update = lambda: setattr(dummy, 'updated', True)
+        Shopcart.find = lambda user_id, item_id: dummy
+        helpers.update_cart_item_helper(1, 100, 7)
+        self.assertEqual(dummy.quantity, 7)
+        self.assertTrue(hasattr(dummy, 'updated'))
+
+# --------------------- Test parse_operator_value and related helpers ---------------------
+class TestParseOperatorsAndFilters(unittest.TestCase):
+    def test_parse_operator_value_eq(self):
+        op, val = helpers.parse_operator_value("eq:100")
+        self.assertEqual(op, "eq")
+        self.assertEqual(val, "100")
+    
+    def test_parse_operator_value_wrapped(self):
+        op, val = helpers.parse_operator_value("~gt~50")
+        self.assertEqual(op, "gt")
+        self.assertEqual(val, "50")
+    
+    def test_parse_operator_value_no_operator(self):
+        op, val = helpers.parse_operator_value("200")
+        self.assertEqual(op, "eq")
+        self.assertEqual(val, "200")
+
+    def test_parse_operator_value_invalid(self):
+        with self.assertRaises(ValueError):
+            helpers.parse_operator_value("~invalid~3")
+
+    def test_validate_price_parameter(self):
+        filters = {}
+        args = {"min-price": "10"}
+        filters = helpers._validate_price_parameter(args, "min-price", filters, "price_min")
+        self.assertEqual(filters["price_min"], 10.0)
+        args_invalid = {"min-price": "-5"}
+        with self.assertRaises(ValueError):
+            helpers._validate_price_parameter(args_invalid, "min-price", {}, "price_min")
+    
+    def test_validate_price_range_valid(self):
+        filters = {"price_min": 10.0, "price_max": 50.0}
+        new_filters = helpers._validate_price_range(filters)
+        self.assertEqual(new_filters, filters)
+    
+    def test_validate_price_range_invalid(self):
+        filters = {"price_min": 60.0, "price_max": 50.0}
+        with self.assertRaises(ValueError):
+            helpers._validate_price_range(filters)
+
+    def test_process_operator_filters(self):
+        args = {"quantity": "~lt~5"}
+        filters = helpers._process_operator_filters(args, ["quantity"])
+        self.assertEqual(filters["quantity"]["operator"], "lt")
+        self.assertEqual(filters["quantity"]["value"], "5")
+
+    def test_extract_item_filters(self):
+        args = {
+            "min-price": "10",
+            "max-price": "50",
+            "item_id": "1,2,3",
+            "description": "Test",
+            "quantity": "~gte~5"
+        }
+        filters = helpers.extract_item_filters(args)
+        self.assertEqual(filters["price_min"], 10.0)
+        self.assertEqual(filters["price_max"], 50.0)
+        self.assertEqual(filters["item_id"]["operator"], "in")
+        self.assertEqual(filters["item_id"]["value"], ["1", "2", "3"])
+        self.assertEqual(filters["quantity"]["operator"], "gte")
+        self.assertEqual(filters["quantity"]["value"], "5")
+
+
+if __name__ == '__main__':
+    unittest.main()
