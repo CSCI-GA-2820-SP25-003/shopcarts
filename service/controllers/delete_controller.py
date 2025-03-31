@@ -2,6 +2,7 @@
 DELETE Controller logic for Shopcart Service
 """
 
+from unittest.mock import patch
 from flask import jsonify
 from flask import current_app as app
 from service.models import Shopcart
@@ -14,19 +15,19 @@ def delete_shopcart_controller(user_id):
     try:
         # Try to find any items for this user
         shopcart_items = Shopcart.find_by_user_id(user_id)
-        
+
         # Even if no items found, we'll still return 204 (common pattern for deletes)
         # as the end state is what the client wanted
         for item in shopcart_items:
             item.delete()
-            
+
         return "", status.HTTP_204_NO_CONTENT
-        
+
     except Exception as e:  # pylint: disable=broad-except
         # Intentionally broad to catch database errors
         app.logger.error("Error deleting shopcart for user_id: %s: %s", user_id, str(e))
         return (
-            jsonify({"error": f"Internal server error: {str(e)}"}), 
+            jsonify({"error": f"Internal server error: {str(e)}"}),
             status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
