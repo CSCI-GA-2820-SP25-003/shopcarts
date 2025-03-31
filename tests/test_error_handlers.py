@@ -87,18 +87,20 @@ class TestErrorHandlers(TestCase):
     # Direct tests for error handler functions to increase coverage
     def test_method_not_allowed_direct(self):
         """Test direct call to method_not_allowed handler (covers line 36)"""
-        # Create a mock error with a description that will work correctly
-        # Instead of using a MagicMock for description, use an actual string
+        # Instead of a custom class, let's use a simple object with a description attribute
+        # where the description itself is a plain string
         class ErrorWithDescription:
             """Custom error class with a description attribute."""
 
             def __init__(self, description):
                 """Initialize with description."""
+                # Directly use a string for the description
                 self.description = description
 
             def __str__(self):
                 """Return a string representation of the error."""
-                return f"Error: {self.description}"
+                # Return just the description to match the error handler's behavior
+                return self.description
 
             def get_message(self):
                 """Return the description message."""
