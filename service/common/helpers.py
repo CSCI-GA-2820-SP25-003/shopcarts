@@ -212,11 +212,11 @@ def extract_item_filters(request_args):
             value_string = request_args[range_key]
             try:
                 start, end = map(str.strip, value_string.split(","))
+                if not start or not end:
+                    raise ValueError(f"Invalid range format for {range_key}: expected start,end")
                 filters[field] = {"operator": "range", "value": [start, end]}
             except ValueError:
-                raise ValueError(
-                    f"Invalid range format for {range_key}: expected start,end"
-                )
+                raise ValueError(f"Invalid range format for {range_key}: expected start,end")
 
         elif field in request_args:
             value_string = request_args[field]
@@ -233,7 +233,6 @@ def extract_item_filters(request_args):
                     filters[field] = {"operator": operator, "value": value}
                 except ValueError as e:
                     raise ValueError(f"Error parsing filter for {field}: {str(e)}")
-
     return filters
 
 
