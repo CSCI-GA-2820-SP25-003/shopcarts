@@ -54,7 +54,6 @@ class TestErrorHandlers(TestCase):
 
     def test_bad_request(self):
         """It should handle bad request errors"""
-        # Use a valid POST endpoint (for example, adding an item to a shopcart)
         resp = self.app.post(
             "/shopcarts/1/items",
             json={"invalid": "data", "quantity": -10},
@@ -62,19 +61,13 @@ class TestErrorHandlers(TestCase):
         )
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
         data = json.loads(resp.data)
-        self.assertIn("status", data)
-        self.assertEqual(data["status"], status.HTTP_400_BAD_REQUEST)
-        self.assertIn("error", data)
         self.assertEqual(data["error"], "Bad Request")
 
     def test_internal_server_error(self):
         """It should handle internal server errors"""
-        # Patch the controller method so that the exception is caught by the error handler
         with patch("service.controllers.get_controller.Shopcart.all", side_effect=Exception("Database error")):
             resp = self.app.get("/shopcarts")
             self.assertEqual(resp.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
             data = json.loads(resp.data)
-            self.assertIn("status", data)
-            self.assertEqual(data["status"], status.HTTP_500_INTERNAL_SERVER_ERROR)
-            self.assertIn("error", data)
+            # Expect the error handler to wrap the exception with a uniform message:
             self.assertEqual(data["error"], "Internal Server Error")

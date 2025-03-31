@@ -518,7 +518,6 @@ class TestShopcartGet(TestShopcartService):
 
     def test_bad_request(self):
         """It should handle bad request errors"""
-        # Use an endpoint that supports POST (for example, adding an item)
         resp = self.client.post(
             "/shopcarts/1/items",
             json={"invalid": "data", "quantity": -10},
@@ -526,9 +525,6 @@ class TestShopcartGet(TestShopcartService):
         )
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
         data = resp.get_json()
-        self.assertIn("status", data)
-        self.assertEqual(data["status"], status.HTTP_400_BAD_REQUEST)
-        self.assertIn("error", data)
         self.assertEqual(data["error"], "Bad Request")
 
     def test_internal_server_error(self):

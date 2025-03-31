@@ -118,3 +118,18 @@ def database_connection_error(error):
         ),
         status.HTTP_503_SERVICE_UNAVAILABLE
     )
+
+
+@app.errorhandler(Exception)
+def handle_general_exception(error):
+    """Handles all unhandled exceptions by returning a 500 error"""
+    message = str(error)
+    app.logger.error("Unhandled Exception: %s", message)
+    return (
+        jsonify(
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            error="Internal Server Error",
+            message=message,
+        ),
+        status.HTTP_500_INTERNAL_SERVER_ERROR,
+    )
