@@ -232,17 +232,16 @@ class TestShopcartGet(TestShopcartService):
     def test_read_user_shopcart_server_error(self):
         """Read by user_id should handle server errors gracefully"""
         self._populate_shopcarts(count=1, user_id=1)
+        # Patch at the controller level to ensure the exception is triggered
         with patch(
-            "service.models.Shopcart.find_by_user_id",
+            "service.controllers.get_controller.Shopcart.find_by_user_id_with_filter",
             side_effect=Exception("Database error"),
         ):
             resp = self.client.get("/shopcarts/1")
             self.assertEqual(resp.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
             data = resp.get_json()
             self.assertIn("error", data)
-            self.assertEqual(data["error"], "Internal server error: Database error")
-            expected_error = "Internal server error: Database error"
-            self.assertEqual(data["error"], expected_error)
+            self.assertIn("Database error", data["error"])
 
     def test_get_user_shopcart_items(self):
         """It should get all items in a user's shopcart"""

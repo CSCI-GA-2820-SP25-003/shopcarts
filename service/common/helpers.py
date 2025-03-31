@@ -3,7 +3,6 @@ Helper functions for services
 """
 
 from datetime import datetime
-from pydoc import Helper
 from flask import request, jsonify
 from service.common import status
 from service.models import Shopcart
@@ -309,21 +308,3 @@ def extract_item_filters(request_args):
                     raise ValueError(f"Error parsing filter for {field}: {str(e)}")
 
     return filters
-
-
-def test_parse_operator_value_invalid_input(self):
-    """It should handle invalid input in parse_operator_value"""
-    with self.assertRaises(ValueError):
-        Helper.parse_operator_value("invalid~input")
-
-
-def test_parse_operator_value_unsupported_operator(self):
-    """It should reject unsupported operators"""
-    with self.assertRaises(ValueError):
-        Helper.parse_operator_value("~unsupported~value")
-
-
-def test_extract_filters_with_invalid_ranges(self):
-    """It should handle invalid range values"""
-    with self.assertRaises(ValueError):
-        Helper.extract_item_filters({"price_range": "not-a-number,10"})
