@@ -52,7 +52,7 @@ def get_user_shopcart_controller(user_id):
         filters = {}
         if request.args:
             filters = helpers.extract_item_filters(request.args)
-            
+        
         # Get shopcart items with filters applied
         shopcart_items = Shopcart.find_by_user_id_with_filter(user_id, filters)
         
@@ -63,9 +63,9 @@ def get_user_shopcart_controller(user_id):
                 "user_id": user_id,
                 "items": [item.serialize() for item in shopcart_items]
             })
-            
-        return jsonify(shopcarts_list), status.HTTP_200_OK
         
+        return jsonify(shopcarts_list), status.HTTP_200_OK
+    
     except ValueError as e:
         return jsonify({"error": str(e)}), status.HTTP_400_BAD_REQUEST
     except HTTPException as e:
