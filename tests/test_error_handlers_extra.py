@@ -34,7 +34,7 @@ class TestErrorHandlersExtra(unittest.TestCase):
         @self.app.route("/trigger-error")
         def trigger_error():
             # Use a more specific exception type to avoid broad exception warning
-            from werkzeug.exceptions import InternalServerError
+            from werkzeug.exceptions import InternalServerError # type: ignore
             raise InternalServerError("Triggered error")
 
         resp = self.client.get("/trigger-error")
