@@ -56,13 +56,16 @@ def get_user_shopcart_controller(user_id):
         # Get shopcart items with filters applied
         shopcart_items = Shopcart.find_by_user_id_with_filter(user_id, filters)
 
+        # If no items found, return 404
+        if not shopcart_items:
+            return jsonify({"error": f"User with id '{user_id}' was not found."}), status.HTTP_404_NOT_FOUND
+
         # Format the response
         shopcarts_list = []
-        if shopcart_items:
-            shopcarts_list.append({
-                "user_id": user_id,
-                "items": [item.serialize() for item in shopcart_items]
-            })
+        shopcarts_list.append({
+            "user_id": user_id,
+            "items": [item.serialize() for item in shopcart_items]
+        })
 
         return jsonify(shopcarts_list), status.HTTP_200_OK
 
@@ -81,32 +84,34 @@ def get_user_shopcart_controller(user_id):
 
 
 def get_user_shopcart_items_controller(user_id):
-    """Gets all items in a specific user's shopcart"""
+    """Gets all items in a user's shopcart"""
     app.logger.info("Request to get all items for user_id: '%s'", user_id)
 
     try:
-        user_items = Shopcart.find_by_user_id(user_id=user_id)
+        # Get all shopcart items for the user
+        shopcart_items = Shopcart.find_by_user_id(user_id)
 
-        if not user_items:
-            return abort(
-                status.HTTP_404_NOT_FOUND, f"User with id '{user_id}' was not found."
-            )
-        # Just return the serialized items directly as a list
-        items_list = [{"user_id": user_id, "items": []}]
-        for item in user_items:
-            data = item.serialize()
-            del data["created_at"]
-            del data["last_updated"]
-            items_list[0]["items"].append(data)
-        return jsonify(items_list), status.HTTP_200_OK
+        # If no items found, return 404
+        if not shopcart_items:
+            return jsonify({"error": f"User with id '{user_id}' was not found."}), status.HTTP_404_NOT_FOUND
+
+        # Format the response
+        shopcarts_list = []
+        shopcarts_list.append({
+            "user_id": user_id,
+            "items": [item.serialize_without_timestamps() for item in shopcart_items]
+        })
+
+        return jsonify(shopcarts_list), status.HTTP_200_OK
+
+    except ValueError as e:
+        return jsonify({"error": str(e)}), status.HTTP_400_BAD_REQUEST
     except HTTPException as e:
-        raise e
+        return jsonify({"error": str(e)}), e.code
     except Exception as e:  # pylint: disable=broad-except
-        app.logger.error(f"Error reading items for user_id: '{user_id}'")
-        return (
-            jsonify({"error": f"Internal server error: {str(e)}"}),
-            status.HTTP_500_INTERNAL_SERVER_ERROR,
-        )
+        # Intentionally broad to catch any unexpected database or serialization errors
+        app.logger.error("Error reading items for user_id: '%s': %s", user_id, str(e))
+        return jsonify({"error": f"Internal server error: {str(e)}"}), status.HTTP_500_INTERNAL_SERVER_ERROR
 
 
 def get_cart_item_controller(user_id, item_id):

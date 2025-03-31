@@ -9,30 +9,25 @@ from service.common import status
 
 
 def delete_shopcart_controller(user_id):
-    """Delete an entire shopcart for a user"""
-    app.logger.info("Request to delete shopcart for user_id: %s", user_id)
-
+    """Delete the entire shopcart for a user"""
+    app.logger.info("Request to delete user shopcart with id: %s", user_id)
     try:
-        # Find all items for this user
-        user_items = Shopcart.find_by_user_id(user_id)
-
-        # Delete each item in the shopcart
-        for item in user_items:
-            app.logger.info(
-                "Deleting item %s from user %s's cart", item.item_id, user_id
-            )
+        # Try to find any items for this user
+        shopcart_items = Shopcart.find_by_user_id(user_id)
+        
+        # Even if no items found, we'll still return 204 (common pattern for deletes)
+        # as the end state is what the client wanted
+        for item in shopcart_items:
             item.delete()
-
-        app.logger.info("Shopcart for user %s deleted", user_id)
-        return {}, status.HTTP_204_NO_CONTENT
-
+            
+        return "", status.HTTP_204_NO_CONTENT
+        
     except Exception as e:  # pylint: disable=broad-except
-        app.logger.error(
-            "Error deleting shopcart for user_id: %s - %s", user_id, str(e)
-        )
+        # Intentionally broad to catch database errors
+        app.logger.error("Error deleting shopcart for user_id: %s: %s", user_id, str(e))
         return (
-            jsonify({"error": f"Internal server error: {str(e)}"}),
-            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            jsonify({"error": f"Internal server error: {str(e)}"}), 
+            status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
 
@@ -74,3 +69,18 @@ def delete_shopcart_item_controller(user_id, item_id):
             jsonify({"error": f"Internal server error: {str(e)}"}),
             status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
+
+
+def test_read_user_shopcart_server_error(self):
+    """Read by user_id should handle server errors gracefully"""
+    self._populate_shopcarts(count=1, user_id=1)
+    # Use a different patch point that will definitely be called
+    with patch(
+        "service.controllers.get_controller.Shopcart.find_by_user_id_with_filter",
+        side_effect=Exception("Database error"),
+    ):
+        resp = self.client.get("/shopcarts/1")
+        self.assertEqual(resp.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        data = resp.get_json()
+        self.assertIn("error", data)
+        self.assertEqual(data["error"], "Internal server error: Database error")
