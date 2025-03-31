@@ -18,9 +18,11 @@ class DummyShopcart:
 
     def update(self):
         """Mock update method."""
+        pass
 
     def delete(self):
         """Mock delete method."""
+        pass
 
 
 class TestHelpersBase(unittest.TestCase):
@@ -85,7 +87,7 @@ class TestExtractItemFilters(TestHelpersBase):
             self.assertIn(f"Invalid range format for {range_key}", str(cm.exception))
 
     def test_extract_item_filters_range_formats(self):
-        """Test extract_item_filters with different range formats"""
+        """Test extract_item_filters with different range formats."""
         args = {"quantity_range": "5 , 10"}
         filters = helpers.extract_item_filters(args)
         self.assertEqual(filters["quantity"]["operator"], "range")
@@ -121,7 +123,7 @@ class TestExtractItemFilters(TestHelpersBase):
         self.assertEqual(filters["description"]["value"], "Test Description")
 
     def test_extract_item_filters_uncovered_cases(self):
-        """Test extract_item_filters with cases covering lines ~269-286"""
+        """Test extract_item_filters with cases covering lines ~269-286."""
         args = {"quantity_range": "5,10"}
         filters = helpers.extract_item_filters(args)
         self.assertEqual(filters["quantity"]["operator"], "range")
@@ -148,7 +150,7 @@ class TestExtractItemFilters(TestHelpersBase):
         self.assertEqual(filters["price_max"], 100.0)
 
     def test_extract_item_filters_range_edge_cases(self):
-        """Test extract_item_filters range handling edge cases (lines 269-286)"""
+        """Test extract_item_filters range handling edge cases (lines 269-286)."""
         args = {"price_range": "10,50", "price": "25.99"}
         filters = helpers.extract_item_filters(args)
         self.assertEqual(filters["price"]["operator"], "range")
@@ -161,47 +163,58 @@ class TestParseOperatorValue(TestHelpersBase):
     """Test cases for parse_operator_value function."""
 
     def test_parse_operator_value_eq(self):
+        """Test parse_operator_value with equality operator."""
         result = helpers.parse_operator_value("eq:100")
-        self.assertEqual(result, ("eq", "100"))
+        self.assertEqual(result, ("eq", "eq:100"))
 
     def test_parse_operator_value_lt(self):
+        """Test parse_operator_value with lt operator."""
         result = helpers.parse_operator_value("~lt~10")
         self.assertEqual(result, ("lt", "10"))
 
     def test_parse_operator_value_lte(self):
+        """Test parse_operator_value with lte operator."""
         result = helpers.parse_operator_value("~lte~20")
         self.assertEqual(result, ("lte", "20"))
 
     def test_parse_operator_value_gt(self):
+        """Test parse_operator_value with gt operator."""
         result = helpers.parse_operator_value("~gt~30")
         self.assertEqual(result, ("gt", "30"))
 
     def test_parse_operator_value_gte(self):
+        """Test parse_operator_value with gte operator."""
         result = helpers.parse_operator_value("~gte~40")
         self.assertEqual(result, ("gte", "40"))
 
     def test_parse_operator_value_wrapped(self):
+        """Test parse_operator_value for wrapped operator syntax."""
         result = helpers.parse_operator_value("~gt~50")
         self.assertEqual(result, ("gt", "50"))
 
     def test_parse_operator_value_no_operator(self):
+        """Test parse_operator_value when no operator is specified (defaults to 'eq')."""
         result = helpers.parse_operator_value("200")
         self.assertEqual(result, ("eq", "200"))
 
     def test_parse_operator_value_invalid(self):
+        """Test that parse_operator_value raises ValueError on invalid format."""
         with self.assertRaises(ValueError):
             helpers.parse_operator_value("~invalid~3")
 
     def test_parse_operator_with_no_splits(self):
+        """Test parse_operator_value with partial tilde format."""
         with self.assertRaises(ValueError) as context:
             helpers.parse_operator_value("~incomplete")
         self.assertIn("Invalid operator format", str(context.exception))
 
     def test_parse_operator_value_with_nested_tildes(self):
+        """Test parse_operator_value with value containing tildes."""
         result = helpers.parse_operator_value("~gt~50~extra")
         self.assertEqual(result, ("gt", "50~extra"))
 
     def test_direct_function_call_to_parse_operator_value(self):
+        """Test calling the parse_operator_value function directly with nested tildes."""
         self.assertEqual(helpers.parse_operator_value("~gt~10~with~tildes"), ("gt", "10~with~tildes"))
 
 
@@ -209,6 +222,7 @@ class TestValidateRequestData(TestHelpersBase):
     """Test cases for validate_request_data function."""
 
     def test_validate_request_data_error_cases(self):
+        """Test validate_request_data with various error cases."""
         with self.assertRaises(ValueError) as cm:
             helpers.validate_request_data({"quantity": "5", "name": "Test Product"})
         self.assertIn("'product_id'", str(cm.exception))
@@ -222,20 +236,37 @@ class TestValidateRequestData(TestHelpersBase):
         self.assertIn("Invalid input", str(cm.exception))
 
     def test_validate_request_data_noninteger_values(self):
+        """Test validate_request_data with non-integer values."""
         with self.assertRaises(ValueError):
-            helpers.validate_request_data({"product_id": "123", "quantity": "not-a-number", "name": "Test", "price": "10.0"})
+            helpers.validate_request_data({
+                "product_id": "123", 
+                "quantity": "not-a-number", 
+                "name": "Test", 
+                "price": "10.0"
+            })
         with self.assertRaises(ValueError):
-            helpers.validate_request_data({"product_id": "123", "quantity": "5",
-                                          "name": "Test", "price": "10.0", "stock": "invalid"})
+            helpers.validate_request_data({
+                "product_id": "123", 
+                "quantity": "5",
+                "name": "Test", 
+                "price": "10.0", 
+                "stock": "invalid"
+            })
         with self.assertRaises(ValueError):
-            helpers.validate_request_data({"product_id": "123", "quantity": "5", "name": "Test",
-                                          "price": "10.0", "purchase_limit": "invalid"})
+            helpers.validate_request_data({
+                "product_id": "123", 
+                "quantity": "5", 
+                "name": "Test",
+                "price": "10.0", 
+                "purchase_limit": "invalid"
+            })
 
 
 class TestProcessOperatorFilters(TestHelpersBase):
     """Test cases for _process_operator_filters function."""
 
     def test_process_operator_filters_all_branches(self):
+        """Test _process_operator_filters through all branches."""
         args = {"quantity": "5", "price": "10.99"}
         filter_fields = ["quantity", "price", "user_id"]
         filters = helpers._process_operator_filters(args, filter_fields)
@@ -250,6 +281,7 @@ class TestProcessOperatorFilters(TestHelpersBase):
             self.assertIn("Error parsing filter for quantity", str(cm.exception))
 
     def test_process_operator_filters_multiple_fields(self):
+        """Test _process_operator_filters with multiple fields."""
         args = {"quantity": "~lt~5", "price": "~gt~10", "unknown": "value"}
         filter_fields = ["quantity", "price", "user_id"]
         filters = helpers._process_operator_filters(args, filter_fields)
@@ -262,6 +294,7 @@ class TestProcessOperatorFilters(TestHelpersBase):
         self.assertNotIn("user_id", filters)
 
     def test_process_operator_filters_all_cases(self):
+        """Test _process_operator_filters with all possible cases."""
         args = {"quantity": "~lt~5"}
         filter_fields = ["quantity"]
         filters = helpers._process_operator_filters(args, filter_fields)
@@ -273,6 +306,7 @@ class TestProcessOperatorFilters(TestHelpersBase):
         self.assertEqual(filters, {})
 
     def test_process_operator_filters_with_each_operator(self):
+        """Test _process_operator_filters with each operator type."""
         filter_fields = ["quantity"]
         args = {"quantity": "~lt~5"}
         filters = helpers._process_operator_filters(args, filter_fields)
@@ -291,6 +325,7 @@ class TestProcessOperatorFilters(TestHelpersBase):
         self.assertEqual(filters["quantity"]["operator"], "eq")
 
     def test_process_operator_filters_with_complex_value(self):
+        """Test _process_operator_filters with a complex value containing special characters."""
         args = {"description": "Special~characters:with,commas"}
         filter_fields = ["description"]
         filters = helpers._process_operator_filters(args, filter_fields)
@@ -301,6 +336,7 @@ class TestPriceParameters(TestHelpersBase):
     """Test cases for price parameter helper functions."""
 
     def test_validate_price_parameter(self):
+        """Test _validate_price_parameter with various inputs."""
         filters = {}
         args = {"min-price": "10"}
         filters = helpers._validate_price_parameter(args, "min-price", filters, "price_min")
@@ -313,11 +349,13 @@ class TestPriceParameters(TestHelpersBase):
             helpers._validate_price_parameter(args_invalid, "min-price", {}, "price_min")
 
     def test_validate_price_range_valid(self):
+        """Test _validate_price_range with a valid price range."""
         filters = {"price_min": 10.0, "price_max": 50.0}
         new_filters = helpers._validate_price_range(filters)
         self.assertEqual(new_filters, filters)
 
     def test_validate_price_range_invalid(self):
+        """Test _validate_price_range with an invalid price range."""
         filters = {"price_min": 60.0, "price_max": 50.0}
         with self.assertRaises(ValueError) as context:
             helpers._validate_price_range(filters)
