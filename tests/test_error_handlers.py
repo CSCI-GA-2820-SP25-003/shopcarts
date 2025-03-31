@@ -89,6 +89,7 @@ class TestErrorHandlers(TestCase):
         """Test direct call to method_not_allowed handler (covers line 36)"""
         # Create a mock error with a description
         mock_error = MagicMock()
+        # Fix: Set description as a string, not a MagicMock
         mock_error.description = "Method not allowed test"
 
         # Call the handler function directly
@@ -98,7 +99,8 @@ class TestErrorHandlers(TestCase):
         self.assertEqual(status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
         data = json.loads(response.get_data(as_text=True))
         self.assertEqual(data["error"], "Method not Allowed")
-        self.assertEqual(data["message"], "Method not allowed test")
+        # Fix: Need to check that description is being used correctly
+        self.assertEqual(data["message"], str(mock_error.description))
 
     def test_bad_request_direct(self):
         """Test direct call to bad_request handler (covers lines 42-44)"""
