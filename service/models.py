@@ -307,45 +307,38 @@ class Shopcart(db.Model):
         """Apply price range filters to the query."""
         if 'price_min' in filters:
             query = query.filter(cls.price >= filters['price_min'])
-            
         if 'price_max' in filters:
             query = query.filter(cls.price <= filters['price_max'])
-        
         return query
 
     @classmethod
     def find_by_user_id_with_filter(cls, user_id, filters=None):
         """
         Finds and returns all Shopcart entries for a specific user with optional filters
-        
         Args:
             user_id (int): the user ID
             filters (dict, optional): Optional filters to apply
                 - price_min: Minimum price threshold
-                - price_max: Maximum price threshold
-                
+        - price_max: Maximum price threshold
         Returns:
             List[Shopcart]: List of Shopcart objects that match the user ID and filters
         """
         query = cls.query.filter(cls.user_id == user_id)
-        
         if not filters:
             return query.all()
-        
         # Apply price range filters (these are special cases)
         query = cls._apply_price_range_filters(query, filters)
-        
         # Apply operator-based filters
-        operator_filters = {k: v for k, v in filters.items() 
-                          if k not in ['price_min', 'price_max'] 
-                          and isinstance(v, dict)
-                          and 'operator' in v and 'value' in v}
-        
+        operator_filters = {k: v for k, v in filters.items()
+                            if k not in ['price_min', 'price_max']
+                            and isinstance(v, dict)
+                            and 'operator' in v and 'value' in v}
+
         if operator_filters:
             conditions = cls._build_filter_conditions(operator_filters)
             for condition in conditions:
                 query = query.filter(condition)
-        
+
         return query.all()
 
     @classmethod

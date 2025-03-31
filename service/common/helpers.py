@@ -250,7 +250,6 @@ def extract_item_filters(request_args):
     # Process min-price and max-price parameters
     filters = _validate_price_parameter(request_args, 'min-price', filters, "price_min")
     filters = _validate_price_parameter(request_args, 'max-price', filters, "price_max")
-    
     # Validate min_price <= max_price
     if "price_min" in filters and "price_max" in filters:
         if filters["price_min"] > filters["price_max"]:
