@@ -54,10 +54,10 @@ class TestErrorHandlers(TestCase):
 
     def test_bad_request(self):
         """It should handle bad request errors"""
-        # Send a request that will trigger a 400 Bad Request
+        # Use a valid POST endpoint (for example, adding an item to a shopcart)
         resp = self.app.post(
-            "/shopcarts",
-            json={"invalid": "data", "user_id": "not-an-integer"},
+            "/shopcarts/1/items",
+            json={"invalid": "data", "quantity": -10},
             content_type="application/json",
         )
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
@@ -69,8 +69,8 @@ class TestErrorHandlers(TestCase):
 
     def test_internal_server_error(self):
         """It should handle internal server errors"""
-        # We need to mock a service method to force a 500 error
-        with patch("service.models.Shopcart.all", side_effect=Exception("Database error")):
+        # Patch the controller method so that the exception is caught by the error handler
+        with patch("service.controllers.get_controller.Shopcart.all", side_effect=Exception("Database error")):
             resp = self.app.get("/shopcarts")
             self.assertEqual(resp.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
             data = json.loads(resp.data)
