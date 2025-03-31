@@ -1,0 +1,57 @@
+import unittest
+from service.common import helpers
+
+class TestHelpersInternal(unittest.TestCase):
+    """Test internal helper functions from helpers.py"""
+
+    def test_validate_price_parameter_valid(self):
+        """Test _validate_price_parameter with a valid parameter."""
+        args = {"min-price": "15.5"}
+        filters = {}
+        result = helpers._validate_price_parameter(args, "min-price", filters, "price_min")
+        self.assertEqual(result["price_min"], 15.5)
+
+    def test_validate_price_parameter_negative(self):
+        """Test _validate_price_parameter rejects negative price."""
+        args = {"max-price": "-5"}
+        filters = {}
+        with self.assertRaises(ValueError) as cm:
+            helpers._validate_price_parameter(args, "max-price", filters, "price_max")
+        self.assertIn("cannot be negative", str(cm.exception))
+
+    def test_validate_price_parameter_invalid_format(self):
+        """Test _validate_price_parameter with an invalid price format."""
+        args = {"min-price": "abc"}
+        filters = {}
+        with self.assertRaises(ValueError) as cm:
+            helpers._validate_price_parameter(args, "min-price", filters, "price_min")
+        self.assertIn("Invalid min-price format", str(cm.exception))
+
+    def test_validate_price_range_valid(self):
+        """Test _validate_price_range with a valid price range."""
+        filters = {"price_min": 10.0, "price_max": 20.0}
+        result = helpers._validate_price_range(filters)
+        self.assertEqual(result, filters)
+
+    def test_validate_price_range_invalid(self):
+        """Test _validate_price_range with an invalid range (min > max)."""
+        filters = {"price_min": 30.0, "price_max": 20.0}
+        with self.assertRaises(ValueError):
+            helpers._validate_price_range(filters)
+
+    def test_process_operator_filters_success(self):
+        """Test _process_operator_filters successfully extracts operator-based filter."""
+        args = {"quantity": "~lte~100"}
+        result = helpers._process_operator_filters(args, ["quantity"])
+        self.assertEqual(result["quantity"], {"operator": "lte", "value": "100"})
+
+    def test_process_operator_filters_failure(self):
+        """Test _process_operator_filters raises an error for unsupported operator."""
+        args = {"quantity": "~bad~100"}
+        with self.assertRaises(ValueError) as cm:
+            helpers._process_operator_filters(args, ["quantity"])
+        self.assertIn("Unsupported operator", str(cm.exception))
+
+
+if __name__ == "__main__":
+    unittest.main()
