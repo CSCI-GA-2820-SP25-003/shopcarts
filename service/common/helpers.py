@@ -2,8 +2,7 @@
 Helper functions for services
 """
 
-from datetime import datetime
-from flask import request, jsonify
+from flask import jsonify
 from service.common import status
 from service.models import Shopcart
 
@@ -123,73 +122,6 @@ def update_cart_item_helper(user_id, item_id, quantity):
         cart_item.update()
 
 
-def parse_range_param(param_name, cast_func, date_format=None):
-    value = request.args.get(param_name)
-    if not value:
-        return None, None
-
-    parts = value.split(",")
-    if len(parts) != 2:
-        raise ValueError(f"{param_name} must have two comma-separated values")
-
-    try:
-        if date_format:
-            min_val = datetime.strptime(parts[0], date_format)
-            max_val = datetime.strptime(parts[1], date_format)
-        else:
-            min_val = cast_func(parts[0])
-            max_val = cast_func(parts[1])
-    except Exception:
-        raise ValueError(f"{param_name} values are invalid or malformed")
-
-    if min_val > max_val:
-        raise ValueError(f"min value cannot be greater than max value in {param_name}")
-
-    return min_val, max_val
-
-
-def extract_filters():
-    """Extract range filters from request arguments."""
-    filters = {}
-    ranges = [
-        ("range_price", "min_price", "max_price", float, None),
-        ("range_qty", "min_qty", "max_qty", int, None),
-        ("range_created_at", "min_date", "max_date", None, "%Y-%m-%d"),
-        ("range_last_updated", "min_update", "max_update", None, "%Y-%m-%d"),
-    ]
-
-    for param, min_key, max_key, cast_type, date_format in ranges:
-        if date_format:
-            min_val, max_val = parse_range_param(
-                param, cast_type, date_format=date_format
-            )
-        else:
-            min_val, max_val = parse_range_param(param, cast_type)
-
-        if min_val is not None:
-            filters[min_key] = min_val
-            filters[max_key] = max_val
-
-    min_price = request.args.get("min-price")
-    max_price = request.args.get("max-price")
-
-    if max_price and min_price and float(min_price) > float(max_price):
-        raise ValueError("Min price larger than max price")
-
-    if max_price:
-        if "max_price" not in filters:
-            filters["max_price"] = float(max_price)
-        else:
-            raise ValueError("Passed in both range_price and max_price/min_price query")
-    if min_price:
-        if "min_price" not in filters:
-            filters["min_price"] = float(min_price)
-        else:
-            raise ValueError("Passed in both range_price and max_price/min_price query")
-
-    return filters
-
-
 def parse_operator_value(value_string):
     """Parse a value string with optional operator prefixes.
 
@@ -252,15 +184,10 @@ def _validate_price_range(filters):
 
 
 def extract_item_filters(request_args):
-    """Extract filter parameters from request arguments.
+    """Extract filter parameters including direct attributes, ranges, and lists."""
 
-    Args:
-        request_args: The request arguments from Flask's request.args
-
-    Returns:
-        dict: Filter parameters with their operators and values
-    """
     filter_fields = [
+        "user_id",
         "quantity",
         "price",
         "created_at",

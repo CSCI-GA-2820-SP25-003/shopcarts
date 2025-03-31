@@ -28,6 +28,7 @@ from wsgi import app
 from service.models import Shopcart, DataValidationError, db
 from tests.factories import ShopcartFactory
 
+
 DATABASE_URI = os.getenv(
     "DATABASE_URI", "postgresql+psycopg://postgres:postgres@localhost:5432/testdb"
 )
@@ -636,3 +637,40 @@ class TestShopCartQueries(ShopCartModelTestCase):
         self.assertEqual(len(found), count)
         for shopcart in found:
             self.assertEqual(shopcart.last_updated, last_updated)
+
+    def test_build_filter_conditions_in(self):
+        """It should generate conditions for 'in' operator"""
+        filters = {"user_id": {"operator": "in", "value": [1, 2, 3]}}
+        conditions = Shopcart._build_filter_conditions(filters)
+
+        # Ensure the IN condition exists
+        self.assertEqual(len(conditions), 1)
+        condition_str = str(conditions[0])
+
+        # Check that the SQLAlchemy query contains the correct structure
+        self.assertIn("shopcart.user_id IN", condition_str)
+        self.assertIn("POSTCOMPILE", condition_str)
+
+    def test_find_by_ranges_direct(self):
+        """It should directly test find_by_ranges to ensure coverage"""
+        # Create 3 entries
+        sc1 = ShopcartFactory(price=15.0, quantity=2)
+        sc2 = ShopcartFactory(price=45.0, quantity=4)
+        sc3 = ShopcartFactory(price=55.0, quantity=6)
+
+        for sc in [sc1, sc2, sc3]:
+            sc.create()
+
+        filters = {
+            "min_price": 10,
+            "max_price": 50,  # Should exclude sc3
+            "min_qty": 1,
+            "max_qty": 5,  # Should exclude sc3
+        }
+
+        results = Shopcart.find_by_ranges(filters)
+
+        self.assertEqual(len(results), 2)
+        for result in results:
+            self.assertTrue(10 <= float(result.price) <= 50)
+            self.assertTrue(1 <= result.quantity <= 5)

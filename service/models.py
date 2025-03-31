@@ -344,7 +344,6 @@ class Shopcart(db.Model):
     @classmethod
     def _build_filter_conditions(cls, filters):
         """Creates filter conditions from filter dict
-
         This is a private helper method to reduce complexity
         """
         conditions = []
@@ -353,6 +352,7 @@ class Shopcart(db.Model):
         type_converters = {
             "price": float,
             "quantity": int,
+            "user_id": int,
             "item_id": int,
             "created_at": datetime.fromisoformat,
             "last_updated": datetime.fromisoformat,
@@ -363,24 +363,48 @@ class Shopcart(db.Model):
             operator = condition["operator"]
             value = condition["value"]
 
-            # Convert value if needed
+            # Convert value
             if field in type_converters:
                 try:
-                    value = type_converters[field](value)
+                    if isinstance(value, list):
+                        value = [type_converters[field](v) for v in value]
+                    else:
+                        value = type_converters[field](value)
                 except (ValueError, TypeError) as exc:
                     raise ValueError(f"Invalid value for {field}: {value}") from exc
 
-            # Map operators to conditions
-            if operator == "eq":
-                conditions.append(model_attr == value)
-            elif operator == "lt":
-                conditions.append(model_attr < value)
-            elif operator == "lte":
-                conditions.append(model_attr <= value)
-            elif operator == "gt":
-                conditions.append(model_attr > value)
-            elif operator == "gte":
-                conditions.append(model_attr >= value)
+            match operator:
+                case "eq":
+                    conditions.append(model_attr == value)
+                case "lt":
+                    conditions.append(model_attr < value)
+                case "lte":
+                    conditions.append(model_attr <= value)
+                case "gt":
+                    conditions.append(model_attr > value)
+                case "gte":
+                    conditions.append(model_attr >= value)
+                case "in":
+                    if isinstance(value, list):
+                        conditions.append(model_attr.in_(value))
+                    else:
+                        raise ValueError(
+                            f"Invalid 'in' operator value for {field}: must be a list"
+                        )
+                case "range":
+                    if isinstance(value, list) and len(value) == 2:
+                        if value[0] > value[1]:
+                            raise ValueError(
+                                f"min value cannot be greater than max value in {field}_range"
+                            )
+                        conditions.append(model_attr >= value[0])
+                        conditions.append(model_attr <= value[1])
+                    else:
+                        raise ValueError(
+                            f"Invalid 'range' operator value for {field}: must be a list of two values"
+                        )
+                case _:
+                    raise ValueError(f"Unsupported operator: {operator}")
 
         return conditions
 
@@ -404,3 +428,23 @@ class Shopcart(db.Model):
             item.delete()
 
         return total_price
+
+    @classmethod
+    def find_all_with_filter(cls, filters=None):
+        """Finds items with optional filters
+
+        Args:
+            filters (dict, optional): Optional filters to apply
+
+        Returns:
+            list: Items matching the filters
+        """
+        logger.info("Finding items with filters %s", filters)
+        query = cls.query
+
+        if not filters:
+            return query.all()
+
+        # Apply all filter conditions
+        filter_conditions = cls._build_filter_conditions(filters)
+        return query.filter(*filter_conditions).all()
