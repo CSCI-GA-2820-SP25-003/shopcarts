@@ -6,16 +6,9 @@ from flask import Flask
 from service.common import helpers, status
 
 
-class TestHelpersExtra(unittest.TestCase):
-    """Test cases for additional helper function scenarios to improve coverage."""
+class TestParseOperatorValue(unittest.TestCase):
+    """Test cases for the parse_operator_value function."""
 
-    def setUp(self):
-        """Set up for tests"""
-        self.app = Flask(__name__)
-        self.app.config["TESTING"] = True
-        self.client = self.app.test_client()
-
-    # Tests for parse_operator_value function
     def test_parse_operator_value_eq(self):
         """Test parse_operator_value with equality operator"""
         # Special format "eq:100" should return (eq, eq:100) since it's not a wrapped format
@@ -57,7 +50,10 @@ class TestHelpersExtra(unittest.TestCase):
         result = helpers.parse_operator_value("~gt~50~extra")
         self.assertEqual(result, ("gt", "50~extra"))
 
-    # Tests for extract_item_filters function
+
+class TestExtractItemFilters(unittest.TestCase):
+    """Test cases for the extract_item_filters function."""
+
     def test_extract_item_filters_min_max_price(self):
         """Test extract_item_filters with min-price and max-price"""
         args = {"min-price": "10", "max-price": "50"}
@@ -112,7 +108,10 @@ class TestHelpersExtra(unittest.TestCase):
         self.assertEqual(len(filters), 7)  # All 7 fields should be present
         self.assertEqual(filters["quantity"]["operator"], "gt")
 
-    # Tests for validate_stock_and_limits function
+
+class TestStockAndLimits(unittest.TestCase):
+    """Test cases for validate_stock_and_limits function."""
+
     def test_validate_stock_and_limits_out_of_stock(self):
         """Test validate_stock_and_limits with out of stock"""
         response = helpers.validate_stock_and_limits(5, 0, None)
@@ -135,6 +134,16 @@ class TestHelpersExtra(unittest.TestCase):
         """Test validate_stock_and_limits with valid inputs"""
         response = helpers.validate_stock_and_limits(5, 10, 10)
         self.assertIsNone(response)
+
+
+class TestCartHelpers(unittest.TestCase):
+    """Test cases for cart helper functions."""
+
+    def setUp(self):
+        """Set up for tests"""
+        self.app = Flask(__name__)
+        self.app.config["TESTING"] = True
+        self.client = self.app.test_client()
 
     # Tests for update_or_create_cart_item function
     @patch('service.common.helpers.Shopcart.find')
@@ -201,6 +210,10 @@ class TestHelpersExtra(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             helpers.update_or_create_cart_item(1, product_data)
+
+
+class TestCartUpdateHelpers(unittest.TestCase):
+    """Test cases for cart update helper functions."""
 
     # Tests for process_cart_updates function
     @patch('service.common.helpers.update_cart_item_helper')
