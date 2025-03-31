@@ -30,6 +30,8 @@ from .test_routes import TestShopcartService  # Local imports come last
 #  T E S T   C A S E S
 ######################################################################
 
+# pylint: disable=too-many-public-methods
+
 
 class TestShopcartGet(TestShopcartService):
     """Test cases for get operations"""
@@ -533,7 +535,6 @@ class TestShopcartGet(TestShopcartService):
     def test_internal_server_error(self):
         """It should handle internal server errors"""
         # We'll mock a method to force a 500 error
-        from unittest.mock import patch
 
         with patch("service.models.Shopcart.all", side_effect=Exception("Database error")):
             resp = self.app.get("/shopcarts")

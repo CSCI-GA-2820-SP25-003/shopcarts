@@ -24,6 +24,7 @@ import json
 from unittest.mock import patch
 from service.common import status
 from .test_routes import TestShopcartService
+from service.models import DatabaseConnectionError
 
 
 ######################################################################
@@ -175,8 +176,10 @@ class TestShopcartDelete(TestShopcartService):
     def test_delete_shopcart_item_with_error(self):
         """It should handle database errors when deleting items"""
         user_id = 900
-        item_id = 901
-        self._populate_shopcarts(count=1, user_id=user_id, item_id=item_id)
+        # Create the shopcart with a normal call
+        shopcart = self._populate_shopcarts(count=1, user_id=user_id)
+        # Get the item_id from the created shopcart
+        item_id = shopcart[0].item_id
 
         # Mock the find method to simulate a database error
         with patch('service.models.Shopcart.find', side_effect=Exception("Database error")):
@@ -192,7 +195,6 @@ class TestShopcartDelete(TestShopcartService):
 
     def test_database_connection_error(self):
         """It should handle database connection errors"""
-        from service.models import DatabaseConnectionError
         with patch("service.models.Shopcart.all", side_effect=DatabaseConnectionError("DB connection error")):
             resp = self.app.get("/shopcarts")
             self.assertEqual(resp.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
