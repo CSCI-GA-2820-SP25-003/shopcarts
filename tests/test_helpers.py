@@ -18,11 +18,9 @@ class DummyShopcart:
 
     def update(self):
         """Mock update method."""
-        pass
 
     def delete(self):
         """Mock delete method."""
-        pass
 
 
 class TestHelpersBase(unittest.TestCase):
