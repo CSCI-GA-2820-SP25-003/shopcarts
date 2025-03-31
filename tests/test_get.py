@@ -20,10 +20,10 @@ TestYourResourceModel API Service Test Suite
 """
 
 # pylint: disable=duplicate-code
+from decimal import Decimal  # Move standard library import to the top
 from unittest.mock import patch
-from service.common import status
-from .test_routes import TestShopcartService
-from decimal import Decimal
+from service.common import status  # First-party imports come after standard library
+from .test_routes import TestShopcartService  # Local imports come last
 
 ######################################################################
 #  T E S T   C A S E S
