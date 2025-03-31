@@ -93,7 +93,16 @@ class TestErrorHandlers(TestCase):
             """Custom error class with a description attribute."""
 
             def __init__(self, description):
+                """Initialize with description."""
                 self.description = description
+
+            def __str__(self):
+                """Return a string representation of the error."""
+                return f"Error: {self.description}"
+
+            def get_message(self):
+                """Return the description message."""
+                return self.description
 
         error = ErrorWithDescription("Method not allowed test")
 
