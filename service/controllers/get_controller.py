@@ -16,16 +16,14 @@ def get_shopcarts_controller():
     shopcarts_list = []
 
     if not request.args:
-        app.logger.info("Request to list shopcarts")
-        # Get all shopcarts grouped by user_id
+        app.logger.info("Request to list all shopcarts")
         all_items = Shopcart.all()
-
     else:
-        app.logger.info("Request to list shopcarts with query range")
-        filters = {}
+        app.logger.info("Request to list shopcarts with filters")
+
         try:
-            filters = helpers.extract_filters()
-            all_items = Shopcart.find_by_ranges(filters=filters)
+            filters = helpers.extract_item_filters(request.args)
+            all_items = Shopcart.find_all_with_filter(filters=filters)
         except ValueError as ve:
             return jsonify({"error": str(ve)}), status.HTTP_400_BAD_REQUEST
 

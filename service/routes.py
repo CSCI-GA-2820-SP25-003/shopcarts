@@ -22,8 +22,8 @@ and Delete Shopcarts
 """
 
 from flask import jsonify
-from flask import current_app as app  # Import Flask application
-from service.common import status  # HTTP Status Codes
+from flask import current_app as app
+from service.common import status
 
 from service.controllers.get_controller import (
     get_shopcarts_controller,
