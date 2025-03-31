@@ -228,6 +228,29 @@ def _validate_price_parameter(request_args, param_name, filters_dict, key_name):
     return filters_dict
 
 
+def _process_operator_filters(request_args, filter_fields):
+    """Process operator-based filters."""
+    filters = {}
+    for field in filter_fields:
+        if field in request_args:
+            try:
+                operator, value = parse_operator_value(request_args[field])
+                filters[field] = {"operator": operator, "value": value}
+            except ValueError as e:
+                raise ValueError(f"Error parsing filter for {field}: {str(e)}")
+    return filters
+
+
+def _validate_price_range(filters):
+    """Validate that min_price <= max_price."""
+    if "price_min" in filters and "price_max" in filters:
+        if filters["price_min"] > filters["price_max"]:
+            raise ValueError(
+                f"min-price ({filters['price_min']}) cannot be greater than max-price ({filters['price_max']})"
+            )
+    return filters
+
+
 def extract_item_filters(request_args):
     """Extract filter parameters from request arguments.
 
@@ -250,20 +273,12 @@ def extract_item_filters(request_args):
     # Process min-price and max-price parameters
     filters = _validate_price_parameter(request_args, 'min-price', filters, "price_min")
     filters = _validate_price_parameter(request_args, 'max-price', filters, "price_max")
-    # Validate min_price <= max_price
-    if "price_min" in filters and "price_max" in filters:
-        if filters["price_min"] > filters["price_max"]:
-            raise ValueError(
-                f"min-price ({filters['price_min']}) cannot be greater than max-price ({filters['price_max']})"
-            )
 
-    # Process other filter parameters
-    for field in filter_fields:
-        if field in request_args:
-            try:
-                operator, value = parse_operator_value(request_args[field])
-                filters[field] = {"operator": operator, "value": value}
-            except ValueError as e:
-                raise ValueError(f"Error parsing filter for {field}: {str(e)}")
+    # Validate price range
+    filters = _validate_price_range(filters)
+
+    # Process operator-based filters
+    operator_filters = _process_operator_filters(request_args, filter_fields)
+    filters.update(operator_filters)
 
     return filters
