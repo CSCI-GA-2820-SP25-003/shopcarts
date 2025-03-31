@@ -239,25 +239,25 @@ class TestValidateRequestData(TestHelpersBase):
         """Test validate_request_data with non-integer values."""
         with self.assertRaises(ValueError):
             helpers.validate_request_data({
-                "product_id": "123", 
-                "quantity": "not-a-number", 
-                "name": "Test", 
+                "product_id": "123",
+                "quantity": "not-a-number",
+                "name": "Test",
                 "price": "10.0"
             })
         with self.assertRaises(ValueError):
             helpers.validate_request_data({
-                "product_id": "123", 
+                "product_id": "123",
                 "quantity": "5",
-                "name": "Test", 
-                "price": "10.0", 
+                "name": "Test",
+                "price": "10.0",
                 "stock": "invalid"
             })
         with self.assertRaises(ValueError):
             helpers.validate_request_data({
-                "product_id": "123", 
-                "quantity": "5", 
+                "product_id": "123",
+                "quantity": "5",
                 "name": "Test",
-                "price": "10.0", 
+                "price": "10.0",
                 "purchase_limit": "invalid"
             })
 
