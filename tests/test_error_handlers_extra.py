@@ -9,7 +9,6 @@ from service.common.error_handlers import internal_server_error
 # Define a custom exception for testing
 class TestServiceError(Exception):
     """Custom exception for testing error handlers."""
-    pass
 
 
 class TestErrorHandlersExtra(unittest.TestCase):
