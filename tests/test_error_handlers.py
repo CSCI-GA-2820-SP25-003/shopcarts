@@ -3,7 +3,7 @@ Test Error Handlers
 """
 import json
 from unittest import TestCase
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 # Fix the import to get app from the correct location
 from service.routes import app  # Import from routes.py instead
 from service.common import status, error_handlers
@@ -87,20 +87,24 @@ class TestErrorHandlers(TestCase):
     # Direct tests for error handler functions to increase coverage
     def test_method_not_allowed_direct(self):
         """Test direct call to method_not_allowed handler (covers line 36)"""
-        # Create a mock error with a description
-        mock_error = MagicMock()
-        # Fix: Set description as a string, not a MagicMock
-        mock_error.description = "Method not allowed test"
+        # Create a mock error with a description that will work correctly
+        # Instead of using a MagicMock for description, use an actual string
+        class ErrorWithDescription:
+            """Custom error class with a description attribute."""
+
+            def __init__(self, description):
+                self.description = description
+
+        error = ErrorWithDescription("Method not allowed test")
 
         # Call the handler function directly
-        response, status_code = error_handlers.method_not_supported(mock_error)
+        response, status_code = error_handlers.method_not_supported(error)
 
         # Verify the response
         self.assertEqual(status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
         data = json.loads(response.get_data(as_text=True))
         self.assertEqual(data["error"], "Method not Allowed")
-        # Fix: Need to check that description is being used correctly
-        self.assertEqual(data["message"], str(mock_error.description))
+        self.assertEqual(data["message"], "Method not allowed test")
 
     def test_bad_request_direct(self):
         """Test direct call to bad_request handler (covers lines 42-44)"""
