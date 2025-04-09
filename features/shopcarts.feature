@@ -67,3 +67,35 @@ Scenario: Add an item product fails due to exceeding purchase limit
     And I set the "Item Purchase Limit" to "2"
     And I press the "Create Item" button
     Then I should see the message "Cannot exceed purchase limit of 2"
+
+Scenario: Read a user's shopcart
+    When I visit the "Home Page"
+    And I set the "User ID" to "1"
+    And I press the "Search" button
+    Then I should see the message "Search results found!"
+    And I should see "Deluxe Widget" in the results
+    And I should see "Premium Gadget" in the results
+    And I should see "101" in the results
+    And I should see "102" in the results
+
+Scenario: Read a specific item in a user's shopcart
+    When I visit the "Home Page"
+    And I set the "User ID" to "1"
+    And I set the "Item ID" to "101"
+    And I press the "Search" button
+    Then I should see the message "Search results found!"
+    And I should see "Deluxe Widget" in the results
+    And I should see "101" in the results
+    And I should not see "102" in the results
+    And I should not see "Premium Gadget" in the results
+
+Scenario: View a user's shopcart details by clicking on it
+    When I visit the "Home Page"
+    And I set the "User ID" to "1"
+    And I press the "Search" button
+    Then I should see the message "Search results found!"
+    When I click on item "101" in the results
+    Then I should see the message "Item details retrieved!"
+    And I should see "Deluxe Widget" in the "Item Description" field
+    And I should see "19.99" in the "Item Price" field
+    And I should see "2" in the "Item Quantity" field

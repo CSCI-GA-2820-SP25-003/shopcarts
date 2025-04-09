@@ -216,7 +216,8 @@ $(function () {
             let firstItem = null;
             for(let i = 0; i < items.length; i++) {
                 let item = items[i];
-                table += `<tr id="row_${i}">
+                // Add id="item_X" to make the row clickable and match the BDD test
+                table += `<tr id="item_${item.item_id}" class="clickable-item" data-user-id="${item.user_id}" data-item-id="${item.item_id}">
                     <td>${item.user_id}</td>
                     <td>${item.item_id}</td>
                     <td>${item.description}</td>
@@ -230,6 +231,31 @@ $(function () {
             }
             table += '</tbody></table>';
             $("#search_results").append(table);
+
+            // Add this immediately after $("#search_results").append(table); in both search and retrieve functions
+            // This adds the click handler to the newly created table rows
+            $(".clickable-item").click(function() {
+                let userId = $(this).data("user-id");
+                let itemId = $(this).data("item-id");
+                
+                // Call API to get item details
+                let ajax = $.ajax({
+                    type: "GET",
+                    url: `/shopcarts/${userId}/items/${itemId}`,
+                    contentType: "application/json",
+                    data: ''
+                });
+
+                ajax.done(function(res) {
+                    // Update the form with this item's details
+                    update_form_data(res);
+                    flash_message("Item details retrieved!");
+                });
+
+                ajax.fail(function(res) {
+                    flash_message(res.responseJSON.error || "Server error!");
+                });
+            });
 
             // Copy the first result to the form
             if (firstItem) {
@@ -365,7 +391,8 @@ $(function () {
             let firstItem = null;
             for(let i = 0; i < items.length; i++) {
                 let item = items[i];
-                table += `<tr id="row_${i}">
+                // Updated row to include id and data attributes
+                table += `<tr id="item_${item.item_id}" class="clickable-item" data-user-id="${item.user_id}" data-item-id="${item.item_id}">
                     <td>${item.user_id}</td>
                     <td>${item.item_id}</td>
                     <td>${item.description}</td>
@@ -379,6 +406,30 @@ $(function () {
             }
             table += '</tbody></table>';
             $("#search_results").append(table);
+
+            // Add click handler for the table rows
+            $(".clickable-item").click(function() {
+                let userId = $(this).data("user-id");
+                let itemId = $(this).data("item-id");
+                
+                // Call API to get item details
+                let ajax = $.ajax({
+                    type: "GET",
+                    url: `/shopcarts/${userId}/items/${itemId}`,
+                    contentType: "application/json",
+                    data: ''
+                });
+
+                ajax.done(function(res) {
+                    // Update the form with this item's details
+                    update_form_data(res);
+                    flash_message("Item details retrieved!");
+                });
+
+                ajax.fail(function(res) {
+                    flash_message(res.responseJSON.error || "Server error!");
+                });
+            });
 
             // Copy the first result to the form
             if (firstItem) {

@@ -191,3 +191,17 @@ def step_impl(context: Any, element_name: str, text_string: str) -> None:
     )
     element.clear()
     element.send_keys(text_string)
+
+
+@when('I click on item "{item_id}" in the results')
+def step_impl(context: Any, item_id: str) -> None:
+    """Click on a specific item in the search results"""
+    # Construct the selector for the item - assuming each item has an id
+    # that includes the item_id
+    item_selector = f"item_{item_id}"
+    
+    # Wait for the element to be clickable and then click it
+    element = WebDriverWait(context.driver, context.wait_seconds).until(
+        expected_conditions.element_to_be_clickable((By.ID, item_selector))
+    )
+    element.click()
