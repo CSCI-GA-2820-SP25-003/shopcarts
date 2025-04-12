@@ -16,6 +16,12 @@ def delete_shopcart_controller(user_id):
         # Find all items for this user
         user_items = Shopcart.find_by_user_id(user_id)
 
+        if not user_items:
+            app.logger.warning("No items found in shopcart for user_id: %s", user_id)
+            return (
+                jsonify({"error": f"Shopcart not found for user {user_id}"}),
+                status.HTTP_404_NOT_FOUND,
+            )
         # Delete each item in the shopcart
         for item in user_items:
             app.logger.info(
