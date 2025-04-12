@@ -1,0 +1,63 @@
+name: BDD Tests
+on:
+  push:
+    branches:
+      - master
+    paths-ignore:
+    - 'README.md'
+    - '.vscode/**'
+    - '**.md'
+  pull_request:
+    branches:
+      - master
+    paths-ignore:
+    - 'README.md'
+    - '.vscode/**'
+    - '**.md'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: quay.io/rofrano/pipeline-selenium:sp25
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_PASSWORD: pgs3cr3t
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+              
+      - name: Install dependencies
+        run: |
+          python -m pip install -U pip pipenv
+          pipenv install --system --dev
+
+      - name: Run the service locally
+        run: |
+          echo "\n*** STARTING APPLICATION ***\n"
+          gunicorn --log-level=info --bind=0.0.0.0:8080 wsgi:app &
+          echo "Waiting for service to stabilize..."
+          sleep 5
+          echo "Checking service /health..."
+          curl -i http://localhost:8080/health
+          echo "\n*** SERVER IS RUNNING ***"
+        env:
+          DATABASE_URI: "postgresql+psycopg://postgres:pgs3cr3t@postgres:5432/testdb"
+
+      - name: Run Integration Tests
+        run: behave
+        env:
+          DRIVER: "chrome"
+  

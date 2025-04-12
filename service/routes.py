@@ -54,6 +54,15 @@ from service.controllers.delete_controller import (
 ######################################################################
 @app.route("/")
 def index():
+    """Base URL for our service"""
+    return app.send_static_file("index.html")
+
+
+######################################################################
+# GET INFO
+######################################################################
+@app.route("/info")
+def info():
     """Root URL response with API metadata"""
     app.logger.info("Request for Root URL")
 

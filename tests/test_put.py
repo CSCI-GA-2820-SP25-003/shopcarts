@@ -80,6 +80,7 @@ class TestShopcartPut(TestShopcartService):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         data = response.get_json()
         self.assertIn("error", data)
+        self.assertEqual("Quantity must be greater than 0.", data["error"])
 
     def test_update_shopcart_missing_payload(self):
         """It should return a 400 error when no JSON payload is provided."""
@@ -257,7 +258,7 @@ class TestShopcartPut(TestShopcartService):
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         data = response.get_json()
-        self.assertIn("error", data)
+        self.assertEqual("Quantity must be greater than 0.", data["error"])
 
     def test_update_cart_item_missing_payload(self):
         """It should return a 400 error if no JSON is provided."""

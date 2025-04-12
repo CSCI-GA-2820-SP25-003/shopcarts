@@ -101,9 +101,6 @@ def process_cart_updates(user_id, items):
         except (KeyError, ValueError, TypeError) as e:
             raise ValueError(f"Invalid input: {e}") from e
 
-        if quantity < 0:
-            raise ValueError("Quantity cannot be negative")
-
         # Attempt to update/remove the cart item
         update_cart_item_helper(user_id, item_id, quantity)
 
@@ -162,33 +159,62 @@ def extract_item_filters(request_args):
     filters = {}
 
     for field in filter_fields:
-        range_key = f"{field}_range"
+        apply_field_filter(field, request_args, filters)
 
-        # Handle range filters like quantity_range=1,10
-        if range_key in request_args:
-            value_string = request_args[range_key]
-            try:
-                start, end = map(str.strip, value_string.split(","))
-                filters[field] = {"operator": "range", "value": [start, end]}
-            except ValueError:
-                raise ValueError(
-                    f"Invalid range format for {range_key}: expected start,end"
-                )
-
-        elif field in request_args:
-            value_string = request_args[field]
-
-            # Handle comma-separated values → "in" filter
-            if "," in value_string:
-                values = [v.strip() for v in value_string.split(",")]
-                filters[field] = {"operator": "in", "value": values}
-
-            # Handle operator-based filters like gte:5
-            else:
-                try:
-                    operator, value = parse_operator_value(value_string)
-                    filters[field] = {"operator": operator, "value": value}
-                except ValueError as e:
-                    raise ValueError(f"Error parsing filter for {field}: {str(e)}")
-
+    try:
+        apply_price_bounds_filter(request_args, filters)
+    except ValueError as e:
+        raise ValueError(f"Error in price filters: {str(e)}")
     return filters
+
+
+def apply_price_bounds_filter(request_args, filters):
+    """Apply min-price / max-price filters, but raise if price already handled."""
+
+    # If price is already handled AND min/max-price are also present, raise error
+    if ("price" in filters or "price_range" in filters) and (
+        "min-price" in request_args or "max-price" in request_args
+    ):
+        raise ValueError(
+            "Cannot use both 'price' or 'price_range' and 'min-price'/'max-price' in the same request."
+        )
+
+    min_price = request_args.get("min-price")
+    max_price = request_args.get("max-price")
+    if min_price and max_price:
+        filters["price"] = {
+            "operator": "range",
+            "value": [min_price, max_price],
+        }
+    elif max_price:
+        filters["price"] = {"operator": "lte", "value": max_price}
+    elif min_price:
+        filters["price"] = {"operator": "gte", "value": min_price}
+
+
+def apply_field_filter(field, request_args, filters):
+    """Apply a filter for a single field to the filters dict."""
+    range_key = f"{field}_range"
+
+    if range_key in request_args:
+        value_string = request_args[range_key]
+        try:
+            start, end = map(str.strip, value_string.split(","))
+            filters[field] = {"operator": "range", "value": [start, end]}
+        except ValueError:
+            raise ValueError(
+                f"Invalid range format for {range_key}: expected start,end"
+            )
+
+    elif field in request_args:
+        value_string = request_args[field]
+
+        if "," in value_string:
+            values = [v.strip() for v in value_string.split(",")]
+            filters[field] = {"operator": "in", "value": values}
+        else:
+            try:
+                operator, value = parse_operator_value(value_string)
+                filters[field] = {"operator": operator, "value": value}
+            except ValueError as e:
+                raise ValueError(f"Error parsing filter for {field}: {str(e)}")

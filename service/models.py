@@ -303,27 +303,6 @@ class Shopcart(db.Model):
         ).all()
 
     @classmethod
-    def find_by_user_id_with_filter(cls, user_id, filters=None):
-        """Finds items for a user with optional filters
-
-        Args:
-            user_id (int): The user ID to search for
-            filters (dict, optional): Optional filters to apply
-
-        Returns:
-            list: Items matching the user_id and filters
-        """
-        logger.info("Finding items for user_id %s with filters %s", user_id, filters)
-        query = cls.query.filter_by(user_id=user_id)
-
-        if not filters:
-            return query.all()
-
-        # Apply all filter conditions
-        filter_conditions = cls._build_filter_conditions(filters)
-        return query.filter(*filter_conditions).all()
-
-    @classmethod
     def _build_filter_conditions(cls, filters):
         """Creates filter conditions from filter dict
         This is a private helper method to reduce complexity

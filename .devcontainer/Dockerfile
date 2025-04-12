@@ -1,5 +1,5 @@
 # Image for a NYU Lab development environment
-FROM rofrano/nyu-devops-base:sp25
+FROM rofrano/pipeline-selenium:latest
 
 # Set up the Python development environment
 WORKDIR /app

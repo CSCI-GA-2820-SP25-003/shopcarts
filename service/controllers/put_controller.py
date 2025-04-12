@@ -61,11 +61,6 @@ def update_cart_item_controller(user_id, item_id):
         return jsonify({"error": "Missing JSON payload"}), status.HTTP_400_BAD_REQUEST
 
     quantity = int(data.get("quantity"))
-    if quantity < 0:
-        return (
-            jsonify({"error": "Quantity cannot be negative"}),
-            status.HTTP_400_BAD_REQUEST,
-        )
 
     cart_item = Shopcart.find(user_id, item_id)
     if not cart_item:
@@ -82,5 +77,9 @@ def update_cart_item_controller(user_id, item_id):
         )
 
     cart_item.quantity = quantity
-    cart_item.update()
+    try:
+        cart_item.update()
+    except ValueError as e:
+        response_body = {"error": str(e)}
+        return jsonify(response_body), status.HTTP_400_BAD_REQUEST
     return jsonify(cart_item.serialize()), status.HTTP_200_OK

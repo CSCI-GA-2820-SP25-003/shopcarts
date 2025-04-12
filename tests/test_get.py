@@ -35,9 +35,15 @@ class TestShopcartGet(TestShopcartService):
     ######################################################################
     #  T E S T   C A S E S  (existing endpoints)
     ######################################################################
-    def test_root_endpoint(self):
+
+    def test_index(self):
+        """It should call the home page"""
+        resp = self.client.get("/")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+    def test_info_endpoint(self):
         """It should return API data at the root endpoint"""
-        response = self.client.get("/")
+        response = self.client.get("/info")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         data = response.get_json()

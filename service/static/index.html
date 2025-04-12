@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Shopcart RESTful Service</title>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/x-icon" href="static/images/newapp-icon.png">
+    <link rel="stylesheet" href="static/css/cerulean_bootstrap.min.css">
+  </head>
+  <body>
+    <div class="container">
+        <div class="page-header">
+            <h1>Shopcart REST API Service</h1>
+        </div>
+
+        <!-- Health Status -->
+        <div class="table-responsive" id="health_status_div">
+            <table class="table">
+            <tr>
+                <td>API Health: <span id="shopcart_health_status">Checking...</span></td>
+            </tr>
+            </table>
+        </div>
+  
+        <!-- Flash Message -->
+        <div class="table-responsive">
+          <table class="table">
+            <tr><td>Status:</td><td><span id="flash_message"></span></td></tr>
+          </table>
+        </div>
+  
+        <!-- FORM -->
+        <div class="col-md-12" id="form_data">
+          <h3>Create, Retrieve, Update, and Delete Shopcart Items:</h3>
+          <div class="well">
+            <div class="form-horizontal">
+              <div class="form-group">
+                <label class="control-label col-sm-2" for="shopcart_user_id">User ID:</label>
+                <div class="col-sm-6">
+                  <input type="text" class="form-control" id="shopcart_user_id" placeholder="Enter User ID">
+                </div>
+                <div class="col-sm-4">
+                  <button type="submit" class="btn btn-primary" id="retrieve-btn">Retrieve Cart</button>
+                  <button type="submit" class="btn btn-danger" id="delete-btn">Delete Cart</button>
+                </div>
+              </div>
+            </div> <!-- form horizontal -->
+  
+            <div class="form-horizontal">
+  
+              <!-- ITEM ID -->
+              <div class="form-group">
+                <label class="control-label col-sm-2" for="shopcart_item_id">Item ID:</label>
+                <div class="col-sm-10">
+                  <input type="text" class="form-control" id="shopcart_item_id" placeholder="Enter item ID">
+                </div>
+              </div>
+  
+              <!-- DESCRIPTION -->
+              <div class="form-group">
+                <label class="control-label col-sm-2" for="shopcart_item_description">Description:</label>
+                <div class="col-sm-10">
+                  <input type="text" class="form-control" id="shopcart_item_description" placeholder="Enter item description">
+                </div>
+              </div>
+  
+              <!-- PRICE -->
+              <div class="form-group">
+                <label class="control-label col-sm-2" for="shopcart_item_price">Price:</label>
+                <div class="col-sm-10">
+                  <input type="text" step="0.01" class="form-control" id="shopcart_item_price" placeholder="Enter price">
+                </div>
+              </div>
+  
+              <!-- QUANTITY -->
+              <div class="form-group">
+                <label class="control-label col-sm-2" for="shopcart_item_quantity">Quantity:</label>
+                <div class="col-sm-10">
+                  <input type="text" class="form-control" id="shopcart_item_quantity" placeholder="Enter quantity">
+                </div>
+              </div>
+
+              <!-- STOCK -->
+              <div class="form-group">
+                <label class="control-label col-sm-2" for="shopcart_item_stock">Stock:</label>
+                <div class="col-sm-10">
+                  <input type="number" class="form-control" id="shopcart_item_stock" placeholder="Enter stock">
+                </div>
+              </div>
+
+              <!-- PURCHASE LIMIT -->
+              <div class="form-group">
+                <label class="control-label col-sm-2" for="shopcart_item_purchase_limit">Purchase Limit:</label>
+                <div class="col-sm-10">
+                  <input type="number" class="form-control" id="shopcart_item_purchase_limit" placeholder="Enter purchase limit">
+                </div>
+              </div>
+  
+              <!-- CREATED DATE (READ ONLY) -->
+              <div class="form-group">
+                <label class="control-label col-sm-2" for="shopcart_item_created_at">Created At:</label>
+                <div class="col-sm-10">
+                  <input type="text" readonly class="form-control" id="shopcart_item_created_at" placeholder="Created date will appear here">
+                </div>
+              </div>
+
+              <!-- Range & Special Filter Inputs -->
+              <div class="form-group">
+                <label class="control-label col-sm-2" for="shopcart_price_range">Price Range (e.g., 10,50):</label>
+                <div class="col-sm-10">
+                  <input type="text" class="form-control" id="shopcart_price_range" placeholder="Enter price range">
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="control-label col-sm-2" for="shopcart_quantity_range">Quantity Range (e.g., 1,5):</label>
+                <div class="col-sm-10">
+                  <input type="text" class="form-control" id="shopcart_quantity_range" placeholder="Enter quantity range">
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="control-label col-sm-2" for="shopcart_min_price">Min Price:</label>
+                <div class="col-sm-10">
+                  <input type="text" step="0.01" class="form-control" id="shopcart_min_price" placeholder="Enter minimum price">
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="control-label col-sm-2" for="shopcart_max_price">Max Price:</label>
+                <div class="col-sm-10">
+                  <input type="text" step="0.01" class="form-control" id="shopcart_max_price" placeholder="Enter maximum price">
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="control-label col-sm-2" for="shopcart_created_at_range">Created At Range (e.g., 2024-01-01,2024-12-31):</label>
+                <div class="col-sm-10">
+                  <input type="text" class="form-control" id="shopcart_created_at_range" placeholder="Enter created_at range">
+                </div>
+              </div>
+
+  
+              <!-- SUBMIT BUTTONS -->
+              <div class="form-group">
+                <div class="col-sm-offset-2 col-sm-10">
+                  <button type="submit" class="btn btn-primary" id="list-btn">List Shopcarts</button>
+                  <button type="submit" class="btn btn-primary" id="search-btn">Search</button>
+                  <button type="submit" class="btn btn-primary" id="search_user-btn">Search User</button>
+                  <button type="submit" class="btn btn-primary" id="clear-btn">Clear</button>
+                  <button type="submit" class="btn btn-success" id="create-btn">Add to Cart</button>
+                  <button type="submit" class="btn btn-success" id="create_item-btn">Add to Cart item</button>
+                  <button type="submit" class="btn btn-warning" id="update-btn">Update Item</button>
+                  <button type="submit" class="btn btn-warning" id="checkout-btn">Checkout</button>
+                  <button type="submit" class="btn btn-danger" id="delete_item-btn">Delete Item</button>
+                </div>
+              </div>
+            </div> <!-- form horizontal -->
+          </div> <!-- end well -->
+        </div> <!-- end Form -->
+  
+        <!-- Search Results -->
+        <div class="table-responsive col-md-12" id="search_results">
+            <h3>Search Results</h3>
+          <table class="table table-striped">
+            <thead>
+            <tr>
+              <th class="col-md-1">User ID</th>
+              <th class="col-md-2">Item ID</th>
+              <th class="col-md-4">Description</th>
+              <th class="col-md-2">Price</th>
+              <th class="col-md-1">Quantity</th>
+              <th class="col-md-2">Created At</th>
+            </tr>
+            </thead>
+          </table>
+        </div>
+  
+        <footer>
+          <br><br>
+          <p>&copy; NYU DevOps Company 2025</p>
+        </footer>
+  
+      </div> <!-- container -->
+
+    <script type="text/javascript" src = "static/js/jquery-3.6.0.min.js"></script>
+    <script type="text/javascript" src = "static/js/bootstrap.min.js"></script>
+
+    <script type="text/javascript" src="static/js/rest_api.js"></script>
+
+  </body>
+</html>

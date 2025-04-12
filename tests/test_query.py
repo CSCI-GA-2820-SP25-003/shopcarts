@@ -371,3 +371,143 @@ class TestQuery(TestShopcartService):
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
         data = resp.get_json()
         self.assertIn("min value cannot be greater", data["error"])
+
+    def test_apply_range_filters_no_filters(self):
+        """It should return all shopcart items when no range filters are provided."""
+        # Populate shopcart for user 1
+        self._populate_shopcarts(count=3, user_id=1, quantity=10, price=50.00)
+        # Call without any range filters
+        resp = self.client.get("/shopcarts/1")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.get_json()
+        self.assertEqual(len(data[0]["items"]), 3)
+
+    def test_apply_range_filters_qty(self):
+        """It should filter shopcart items based on quantity range."""
+        # Create 2 items with quantity in range (e.g. 15) and 1 outside (e.g. 30)
+        self._populate_shopcarts(count=2, user_id=1, quantity=15)
+        self._populate_shopcarts(count=1, user_id=1, quantity=30)
+        # Use quantity range filter: only items with quantity between 10 and 20 should pass
+        resp = self.client.get("/shopcarts/1?quantity_range=10,20")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.get_json()
+        items = data[0]["items"]
+        # Only the two items with quantity 15 should be returned
+        self.assertEqual(len(items), 2)
+        for item in items:
+            self.assertGreaterEqual(item["quantity"], 10)
+            self.assertLessEqual(item["quantity"], 20)
+
+    def test_apply_range_filters_price(self):
+        """It should filter shopcart items based on price range."""
+        # Create 2 items with price in range (e.g. 45.00) and 1 outside (e.g. 80.00)
+        self._populate_shopcarts(count=2, user_id=1, price=45.00)
+        self._populate_shopcarts(count=1, user_id=1, price=80.00)
+        # Use price range filter: only items with price between 40 and 60 should pass
+        resp = self.client.get("/shopcarts/1?price_range=40,60")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.get_json()
+        items = data[0]["items"]
+        # Only the 2 items with price 45.00 should be returned
+        self.assertEqual(len(items), 2)
+        for item in items:
+            self.assertGreaterEqual(item["price"], 40.0)
+            self.assertLessEqual(item["price"], 60.0)
+
+    def test_apply_range_filters_combined(self):
+        """It should filter shopcart items based on combined quantity and price ranges."""
+        # Create 2 items with quantity 20 and price 75.0, and 1 item with quantity 100 and price 200.0
+        self._populate_shopcarts(count=2, user_id=1, quantity=20, price=75.0)
+        self._populate_shopcarts(count=1, user_id=1, quantity=100, price=200.0)
+        # Use combined filters: quantity between 10 and 30 and price between 70 and 80
+        resp = self.client.get("/shopcarts/1?quantity_range=10,30&price_range=70,80")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.get_json()
+        items = data[0]["items"]
+        # Only the 2 items with quantity 20 and price 75.0 should pass both filters
+        self.assertEqual(len(items), 2)
+        for item in items:
+            self.assertGreaterEqual(item["quantity"], 10)
+            self.assertLessEqual(item["quantity"], 30)
+            self.assertGreaterEqual(item["price"], 70.0)
+            self.assertLessEqual(item["price"], 80.0)
+
+    def test_apply_range_filters_invalid(self):
+        """It should return 400 if an invalid range filter is provided (e.g. only one value)."""
+        # Create some shopcart items
+        self._populate_shopcarts(count=2, user_id=1, price=50.00)
+        # Send an invalid range filter with only one value for price
+        resp = self.client.get("/shopcarts/1?price_range=40")
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        data = resp.get_json()
+        self.assertIn("error", data)
+        self.assertIn(
+            "Invalid range format for price_range: expected start,end", data["error"]
+        )
+
+        # Also test for quantity
+        resp = self.client.get("/shopcarts/1?quantity_range=10")
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        data = resp.get_json()
+        self.assertIn("error", data)
+        self.assertIn(
+            "Invalid range format for quantity_range: expected start,end", data["error"]
+        )
+
+    def test_apply_price_conflict_with_min_max(self):
+        """It should return 400 if both price and min-price/max-price are used."""
+        self._populate_shopcarts(count=1, user_id=1, price=50.00)
+
+        resp = self.client.get("/shopcarts/1?price=~gte~40&min-price=30")
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        data = resp.get_json()
+        self.assertIn("error", data)
+        self.assertIn(
+            "Cannot use both 'price' or 'price_range' and 'min-price'/'max-price'",
+            data["error"],
+        )
+
+    def test_invalid_min_max_price_values(self):
+        """It should return 400 for invalid min-price or max-price values."""
+        resp = self.client.get("/shopcarts/1?min-price=cheap")
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        data = resp.get_json()
+        self.assertIn("error", data)
+
+        resp = self.client.get("/shopcarts/1?max-price=expensive")
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        data = resp.get_json()
+        self.assertIn("error", data)
+
+    def test_min_max_price_filter_on_shopcarts(self):
+        """It should filter shopcarts by min-price and max-price, with and without user_id"""
+
+        # Create matching and non-matching items
+        self._populate_shopcarts(count=2, user_id=1, price=75.0)
+        self._populate_shopcarts(count=2, user_id=1, price=85.0)
+        self._populate_shopcarts(count=2, user_id=1, price=65.0)
+
+        # Test: /shopcarts/1 (with user_id)
+        resp = self.client.get("/shopcarts/1?min-price=70&max-price=80")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.get_json()
+        items = data[0]["items"]
+
+        self.assertEqual(len(items), 2)
+        for item in items:
+            self.assertGreaterEqual(item["price"], 70.0)
+            self.assertLessEqual(item["price"], 80.0)
+
+        # Test: /shopcarts (without user_id)
+        resp = self.client.get("/shopcarts?min-price=70&max-price=80")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.get_json()
+
+        all_items = []
+        for cart in data:
+            all_items.extend(cart["items"])
+
+        self.assertEqual(len(all_items), 2)
+        for item in all_items:
+            self.assertGreaterEqual(item["price"], 70.0)
+            self.assertLessEqual(item["price"], 80.0)

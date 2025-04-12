@@ -50,9 +50,8 @@ def get_user_shopcart_controller(user_id):
         if request.args:
             try:
                 filters = helpers.extract_item_filters(request.args)
-                user_items = Shopcart.find_by_user_id_with_filter(
-                    user_id=user_id, filters=filters
-                )
+                filters["user_id"] = {"operator": "eq", "value": str(user_id)}
+                user_items = Shopcart.find_all_with_filter(filters=filters)
             except ValueError as ve:
                 return jsonify({"error": str(ve)}), status.HTTP_400_BAD_REQUEST
         else:
