@@ -1,3 +1,10 @@
+"""Flask-RESTX models and namespace definitions for the Shopcart service.
+
+This module defines the API namespace and data models used for request/response
+validation and Swagger documentation. It includes models for shopcart items,
+user carts, and various request payloads.
+"""
+
 from flask_restx import Namespace, fields
 
 

@@ -49,7 +49,7 @@ def create_app():
 
         api.init_app(app)
         api.add_namespace(shopcart_ns, path="/shopcarts")
-
+        app.config["SWAGGER_UI_DOC_EXPANSION"] = "list"
         try:
             db.create_all()
         except Exception as error:  # pylint: disable=broad-except
