@@ -20,6 +20,8 @@ and SQL database
 """
 import sys
 from flask import Flask
+from service.swagger import api
+from service.controllers.shopcarts_namespace import shopcart_ns
 from service import config
 from service.common import log_handlers
 
@@ -36,6 +38,7 @@ def create_app():
     # Initialize Plugins
     # pylint: disable=import-outside-toplevel
     from service.models import db
+
     db.init_app(app)
 
     with app.app_context():
@@ -43,6 +46,9 @@ def create_app():
         # pylint: disable=wrong-import-position, wrong-import-order, unused-import
         from service import routes, models  # noqa: F401 E402
         from service.common import error_handlers, cli_commands  # noqa: F401, E402
+
+        api.init_app(app)
+        api.add_namespace(shopcart_ns, path="/shopcarts")
 
         try:
             db.create_all()
