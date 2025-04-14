@@ -207,3 +207,15 @@ def step_impl(context, expected_text):
 
     actual_text = element.text.strip()
     assert expected_text in actual_text
+
+
+@when('I click on item "{item_id}" in the results')
+def step_impl(context: Any, item_id: str) -> None:
+    """Click on a specific item in the search results"""
+    # Find the element by its ID
+    item_selector = f"item_{item_id}"
+    
+    element = WebDriverWait(context.driver, context.wait_seconds).until(
+        expected_conditions.element_to_be_clickable((By.ID, item_selector))
+    )
+    element.click()

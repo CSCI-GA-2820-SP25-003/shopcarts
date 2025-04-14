@@ -270,3 +270,66 @@ Scenario: Return error for invalid min-price
     And I set the "Max Price" to "expensive"
     And I press the "Search User" button
     Then I should see the message "Invalid value for price: expensive"
+
+Scenario: Retrieve a specific user's shopcart
+    When I visit the "Home Page"
+    And I set the "User ID" to "1"
+    And I press the "Retrieve" button
+    Then I should see the message "Shopcart retrieved successfully!"
+    And I should see "Deluxe Widget" in the results
+    And I should see "Premium Gadget" in the results
+    And I should see "101" in the results
+    And I should see "102" in the results
+
+Scenario: Retrieve all items from a user's shopcart
+    When I visit the "Home Page"
+    And I set the "User ID" to "1"
+    And I press the "Retrieve Items" button
+    Then I should see the message "Items retrieved successfully!"
+    And I should see "Deluxe Widget" in the results
+    And I should see "Premium Gadget" in the results
+    And I should see "101" in the results
+    And I should see "102" in the results
+    And I should not see "created_at" in the results
+    And I should not see "last_updated" in the results
+
+Scenario: Retrieve a specific item from a user's shopcart
+    When I visit the "Home Page"
+    And I set the "User ID" to "1"
+    And I set the "Item ID" to "101"
+    And I press the "Retrieve Item" button
+    Then I should see the message "Item retrieved successfully!"
+    And I should see "Deluxe Widget" in the "Item Description" field
+    And I should see "19.99" in the "Item Price" field
+    And I should see "2" in the "Item Quantity" field
+
+Scenario: Read a user's shopcart
+    When I visit the "Home Page"
+    And I set the "User ID" to "1"
+    And I press the "Retrieve" button
+    Then I should see the message "Shopcart retrieved successfully!"
+    And I should see "Deluxe Widget" in the results
+    And I should see "Premium Gadget" in the results
+    And I should see "101" in the results
+    And I should see "102" in the results
+
+Scenario: Read a specific item in a user's shopcart
+    When I visit the "Home Page"
+    And I set the "User ID" to "1"
+    And I set the "Item ID" to "101"
+    And I press the "Retrieve Item" button
+    Then I should see the message "Item retrieved successfully!"
+    And I should see "Deluxe Widget" in the "Item Description" field
+    And I should see "19.99" in the "Item Price" field
+    And I should see "2" in the "Item Quantity" field
+
+Scenario: View a user's shopcart details by clicking on it
+    When I visit the "Home Page"
+    And I set the "User ID" to "1"
+    And I press the "Search" button
+    Then I should see the message "Search results found!"
+    When I click on item "101" in the results
+    Then I should see the message "Item details retrieved!"
+    And I should see "Deluxe Widget" in the "Item Description" field
+    And I should see "19.99" in the "Item Price" field
+    And I should see "2" in the "Item Quantity" field
