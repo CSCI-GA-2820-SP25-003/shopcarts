@@ -73,7 +73,7 @@ $(function () {
     
         let ajax = $.ajax({
             type: "GET",
-            url: "/shopcarts",
+            url: "/api/shopcarts",
             contentType: "application/json",
             data: ""
         });
@@ -153,7 +153,7 @@ $(function () {
         
         let ajax = $.ajax({
             type: "POST",
-            url: `/shopcarts/${user_id}`,
+            url: `/api/shopcarts/${user_id}`,
             contentType: "application/json",
             data: JSON.stringify(data),
         });
@@ -196,7 +196,7 @@ $(function () {
     
         let ajax = $.ajax({
             type: "POST",
-            url: `/shopcarts/${user_id}/items`,
+            url: `/api/shopcarts/${user_id}/items`,
             contentType: "application/json",
             data: JSON.stringify(data)
         });
@@ -231,7 +231,7 @@ $(function () {
 
         let ajax = $.ajax({
             type: "PUT",
-            url: `/shopcarts/${user_id}/items/${item_id}`,
+            url: `/api/shopcarts/${user_id}/items/${item_id}`,
             contentType: "application/json",
             data: JSON.stringify(data)
         });
@@ -274,7 +274,7 @@ $(function () {
 
         let ajax = $.ajax({
             type: "DELETE",
-            url: `/shopcarts/${user_id}/items/${item_id}`,
+            url: `/api/shopcarts/${user_id}/items/${item_id}`,
             contentType: "application/json",
             data: ''
         });
@@ -319,7 +319,7 @@ $(function () {
     // Retrieve All Items from a User's Shopcart
     // ****************************************
 
-    $("#retrieve-items-btn").click(function () {
+    $("#retrieve_items-btn").click(function () {
         let user_id = $("#shopcart_user_id").val();
         
         if (!user_id) {
@@ -374,7 +374,7 @@ $(function () {
     // Retrieve a Specific Item from a User's Shopcart
     // ****************************************
 
-    $("#retrieve-item-btn").click(function () {
+    $("#retrieve_item-btn").click(function () {
         let user_id = $("#shopcart_user_id").val();
         let item_id = $("#shopcart_item_id").val();
         
@@ -418,7 +418,7 @@ $(function () {
 
         let ajax = $.ajax({
             type: "DELETE",
-            url: `/shopcarts/${user_id}`,
+            url: `/api/shopcarts/${user_id}`,
             contentType: "application/json",
             data: '',
         });
@@ -534,7 +534,7 @@ $(function () {
         $("#flash_message").empty();
 
         // Default search URL if no queryString
-        let searchUrl = "/shopcarts";
+        let searchUrl = "/api/shopcarts";
         if (queryString.length > 0) {
             searchUrl += "?" + queryString;
         }
@@ -642,7 +642,7 @@ $(function () {
         $("#flash_message").empty();
 
         // Default search URL if no queryString
-        let searchUrl = `/shopcarts/${user_id}`;
+        let searchUrl = `/api/shopcarts/${user_id}`;
         if (queryString.length > 0) {
             searchUrl += "?" + queryString;
         }
@@ -674,7 +674,7 @@ $(function () {
     
         let ajax = $.ajax({
             type: "POST",
-            url: `/shopcarts/${user_id}/checkout`,
+            url: `/api/shopcarts/${user_id}/checkout`,
             contentType: "application/json",
             data: "",
         });
