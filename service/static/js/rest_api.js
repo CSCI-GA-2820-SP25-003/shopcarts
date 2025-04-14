@@ -73,7 +73,7 @@ $(function () {
     
         let ajax = $.ajax({
             type: "GET",
-            url: "/api/shopcarts",
+            url: "/shopcarts",  // REMOVE /api prefix
             contentType: "application/json",
             data: ""
         });
@@ -269,7 +269,7 @@ $(function () {
         
         let ajax = $.ajax({
             type: "GET",
-            url: `/api/shopcarts/${user_id}`, // Add /api prefix
+            url: `/shopcarts/${user_id}`, // REMOVE /api prefix
             contentType: "application/json"
         });
         
@@ -306,7 +306,7 @@ $(function () {
         
         let ajax = $.ajax({
             type: "GET",
-            url: `/api/shopcarts/${user_id}/items`, // Add /api prefix
+            url: `/shopcarts/${user_id}/items`, // REMOVE /api prefix
             contentType: "application/json"
         });
         
@@ -349,7 +349,7 @@ $(function () {
         
         let ajax = $.ajax({
             type: "GET",
-            url: `/api/shopcarts/${user_id}/items/${item_id}`, // Add /api prefix
+            url: `/shopcarts/${user_id}/items/${item_id}`, // REMOVE /api prefix
             contentType: "application/json"
         });
         
@@ -492,7 +492,7 @@ $(function () {
         $("#flash_message").empty();
 
         // Default search URL if no queryString
-        let searchUrl = "/api/shopcarts";
+        let searchUrl = "/shopcarts";  // REMOVE /api prefix
         if (queryString.length > 0) {
             searchUrl += "?" + queryString;
         }
@@ -698,7 +698,7 @@ $(function () {
     function get_item_details(userId, itemId) {
         $.ajax({
             type: "GET",
-            url: `/api/shopcarts/${userId}/items/${itemId}`, // Add /api prefix
+            url: `/shopcarts/${userId}/items/${itemId}`, // REMOVE /api prefix
             contentType: "application/json",
             success: function(res) {
                 // Fill in the form with item details
@@ -726,8 +726,12 @@ $(function () {
         table += '<th class="col-md-2">Price</th>';
         table += '</tr></thead><tbody>';
         
+        // If no data or empty array
+        if (!data || (Array.isArray(data) && data.length === 0)) {
+            table += '<tr><td colspan="5">No items found</td></tr>';
+        }
         // Process the result data based on its structure
-        if (Array.isArray(data)) {
+        else if (Array.isArray(data)) {
             // Handle array of items or shopcarts
             data.forEach((item) => {
                 if (item.items) {
@@ -774,7 +778,7 @@ $(function () {
             // Get the item details
             $.ajax({
                 type: "GET",
-                url: `/api/shopcarts/${userId}/items/${itemId}`, // Add /api prefix
+                url: `/shopcarts/${userId}/items/${itemId}`, // REMOVE /api prefix
                 contentType: "application/json",
                 success: function(res) {
                     update_form_data(res);
