@@ -117,7 +117,7 @@ $(function () {
         
         let ajax = $.ajax({
             type: "POST",
-            url: `/api/shopcarts/${user_id}`,
+            url: `/shopcarts/${user_id}/items`, // Ensure no /api prefix
             contentType: "application/json",
             data: JSON.stringify(data),
         });
@@ -195,7 +195,7 @@ $(function () {
 
         let ajax = $.ajax({
             type: "PUT",
-            url: `/api/shopcarts/${user_id}/items/${item_id}`,
+            url: `/shopcarts/${user_id}/items/${item_id}`, // Ensure no /api prefix
             contentType: "application/json",
             data: JSON.stringify(data)
         });
@@ -238,7 +238,7 @@ $(function () {
 
         let ajax = $.ajax({
             type: "DELETE",
-            url: `/api/shopcarts/${user_id}/items/${item_id}`,
+            url: `/shopcarts/${user_id}/items/${item_id}`, // Ensure no /api prefix
             contentType: "application/json",
             data: ''
         });
@@ -376,7 +376,7 @@ $(function () {
 
         let ajax = $.ajax({
             type: "DELETE",
-            url: `/api/shopcarts/${user_id}`,
+            url: `/shopcarts/${user_id}`, // Ensure no /api prefix
             contentType: "application/json",
             data: '',
         });
@@ -607,7 +607,8 @@ $(function () {
         $("#flash_message").empty();
 
         // Default search URL if no queryString
-        let searchUrl = `/api/shopcarts/${user_id}`;
+        let searchUrl = `/shopcarts/${user_id}`; // Ensure no /api prefix
+        
         if (queryString.length > 0) {
             searchUrl += "?" + queryString;
         }
@@ -616,7 +617,6 @@ $(function () {
             type: "GET",
             url: searchUrl,
             contentType: "application/json",
-            data: ''
         });
 
         ajax.done(function(res){
@@ -638,10 +638,9 @@ $(function () {
         $("#flash_message").empty();
     
         let ajax = $.ajax({
-            type: "POST",
-            url: `/api/shopcarts/${user_id}/checkout`,
+            type: "PUT", 
+            url: `/shopcarts/${user_id}/checkout`, // Ensure no /api prefix
             contentType: "application/json",
-            data: "",
         });
     
         ajax.done(function (res) {
@@ -778,14 +777,23 @@ $(function () {
             // Get the item details
             $.ajax({
                 type: "GET",
-                url: `/shopcarts/${userId}/items/${itemId}`, // REMOVE /api prefix
+                url: `/shopcarts/${userId}/items/${itemId}`, // This is now working with the /shopcarts path
                 contentType: "application/json",
                 success: function(res) {
-                    update_form_data(res);
+                    // Fill in the form fields with the item's data
+                    $("#shopcart_item_description").val(res.description);
+                    $("#shopcart_item_price").val(res.price);
+                    $("#shopcart_item_quantity").val(res.quantity);
+                    $("#shopcart_item_created_at").val(res.created_at);
+                    
+                    // Update the User ID and Item ID fields
+                    $("#shopcart_user_id").val(userId);
+                    $("#shopcart_item_id").val(itemId);
+                    
                     flash_message("Item details retrieved!");
                 },
                 error: function(res) {
-                    flash_message(res.responseJSON?.error || "Error retrieving item details");
+                    flash_message("Error retrieving item details: " + res.responseJSON.message);
                 }
             });
         });
