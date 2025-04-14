@@ -78,51 +78,15 @@ $(function () {
             data: ""
         });
     
-        ajax.done(function(res){
-            $("#search_results").empty();
-            let table = '<table class="table table-striped">';
-            table += '<thead><tr>';
-            table += '<th class="col-md-1">User ID</th>';
-            table += '<th class="col-md-2">Item ID</th>';
-            table += '<th class="col-md-4">Description</th>';
-            table += '<th class="col-md-2">Price</th>';
-            table += '<th class="col-md-1">Quantity</th>';
-            table += '<th class="col-md-2">Created At</th>';
-            table += '</tr></thead><tbody>';
-
-            // Flatten items from all carts
-            let items = [];
-            for (let cart of res) {
-                for (let item of cart.items) {
-                    items.push(item);
-                }
-            }
-
-            let firstItem = null;
-            for(let i = 0; i < items.length; i++) {
-                let item = items[i];
-                table += `<tr id="row_${i}">
-                    <td>${item.user_id}</td>
-                    <td>${item.item_id}</td>
-                    <td>${item.description}</td>
-                    <td>${item.price.toFixed(2)}</td>
-                    <td>${item.quantity}</td>
-                    <td>${item.created_at}</td>
-                </tr>`;
-                if (i == 0) {
-                    firstItem = item;
-                }
-            }
-            table += '</tbody></table>';
-            $("#search_results").append(table);
-
-            // Copy the first result to the form
-            if (firstItem) {
-                update_form_data(firstItem);
-                flash_message("All shopcarts listed.");
-            } else {
-                flash_message("No items found matching the search criteria.");
-            }
+        ajax.done(function(res) {
+            // Use the new formatSearchResults function
+            let table = formatSearchResults(res);
+            $("#search_results").html(table);
+            
+            // Add click handlers to rows
+            addItemClickHandlers();
+            
+            flash_message("List results found!");
         });
     
         ajax.fail(function(res){
@@ -296,22 +260,33 @@ $(function () {
     $("#retrieve-btn").click(function () {
         let user_id = $("#shopcart_user_id").val();
         
+        if (!user_id) {
+            flash_message("User ID is required to retrieve a shopcart");
+            return;
+        }
+        
         $("#flash_message").empty();
         
         let ajax = $.ajax({
             type: "GET",
-            url: `/api/shopcarts/${user_id}`,
-            contentType: "application/json",
-            data: ''
+            url: `/shopcarts/${user_id}`, // Note: Don't use /api prefix yet
+            contentType: "application/json"
         });
         
         ajax.done(function(res) {
-            display_search_results(res);
+            // Display the results
+            let table = formatSearchResults(res);
+            $("#search_results").html(table);
+            
+            // Add click event to the rows
+            addItemClickHandlers();
+            
             flash_message("Shopcart retrieved successfully!");
         });
         
         ajax.fail(function(res) {
-            flash_message(res.responseJSON?.error || "Shopcart not found for this user.");
+            clear_form_data();
+            flash_message(res.responseJSON.error || "Shopcart not found for this user.");
         });
     });
 
@@ -323,7 +298,7 @@ $(function () {
         let user_id = $("#shopcart_user_id").val();
         
         if (!user_id) {
-            flash_message("User ID is required to retrieve items.");
+            flash_message("User ID is required to retrieve items");
             return;
         }
         
@@ -331,42 +306,24 @@ $(function () {
         
         let ajax = $.ajax({
             type: "GET",
-            url: `/api/shopcarts/${user_id}/items`,
-            contentType: "application/json",
-            data: ''
+            url: `/shopcarts/${user_id}/items`,
+            contentType: "application/json"
         });
         
         ajax.done(function(res) {
-            // Display results
-            let table = '<table class="table table-striped" cellpadding="10">';
-            table += '<thead><tr>';
-            table += '<th class="col-md-2">User ID</th>';
-            table += '<th class="col-md-2">Item ID</th>';
-            table += '<th class="col-md-4">Description</th>';
-            table += '<th class="col-md-2">Quantity</th>';
-            table += '<th class="col-md-2">Price</th>';
-            table += '</tr></thead><tbody>';
-            
-            res.forEach((cart) => {
-                cart.items.forEach((item) => {
-                    table += `<tr id="item_${item.item_id}" class="item-row" data-id="${item.item_id}" data-user-id="${item.user_id}">
-                        <td>${item.user_id}</td>
-                        <td>${item.item_id}</td>
-                        <td>${item.description}</td>
-                        <td>${item.quantity}</td>
-                        <td>${item.price}</td>
-                    </tr>`;
-                });
-            });
-            
-            table += '</tbody></table>';
+            // Display the results
+            let table = formatSearchResults(res);
             $("#search_results").html(table);
+            
+            // Add click event to the rows
+            addItemClickHandlers();
+            
             flash_message("Items retrieved successfully!");
         });
         
         ajax.fail(function(res) {
             clear_form_data();
-            flash_message(res.responseJSON.error || "Server error!");
+            flash_message(res.responseJSON.error || "Failed to retrieve items");
         });
     });
 
@@ -379,12 +336,12 @@ $(function () {
         let item_id = $("#shopcart_item_id").val();
         
         if (!user_id) {
-            flash_message("User ID is required to retrieve an item.");
+            flash_message("User ID is required to retrieve an item");
             return;
         }
         
         if (!item_id) {
-            flash_message("Item ID is required to retrieve an item.");
+            flash_message("Item ID is required to retrieve an item");
             return;
         }
         
@@ -392,18 +349,19 @@ $(function () {
         
         let ajax = $.ajax({
             type: "GET",
-            url: `/api/shopcarts/${user_id}/items/${item_id}`,
-            contentType: "application/json",
-            data: ''
+            url: `/shopcarts/${user_id}/items/${item_id}`,
+            contentType: "application/json"
         });
         
         ajax.done(function(res) {
+            // Update the form fields with this item's details
             update_form_data(res);
             flash_message("Item retrieved successfully!");
         });
         
         ajax.fail(function(res) {
-            flash_message(res.responseJSON?.error || "Item not found.");
+            clear_form_data();
+            flash_message(res.responseJSON.error || "Item not found");
         });
     });
 
@@ -546,8 +504,15 @@ $(function () {
             data: ''
         });
 
-        ajax.done(function(res){
-            display_search_results(res);
+        ajax.done(function(res) {
+            // Use the new formatSearchResults function
+            let table = formatSearchResults(res);
+            $("#search_results").html(table);
+            
+            // Add click handlers to rows
+            addItemClickHandlers();
+            
+            flash_message("Search results found!");
         });
 
         ajax.fail(function(res){
@@ -733,7 +698,7 @@ $(function () {
     function get_item_details(userId, itemId) {
         $.ajax({
             type: "GET",
-            url: `/api/shopcarts/${userId}/items/${itemId}`,
+            url: `/shopcarts/${userId}/items/${itemId}`,
             contentType: "application/json",
             success: function(res) {
                 // Fill in the form with item details
@@ -741,8 +706,84 @@ $(function () {
                 flash_message("Item details retrieved!");
             },
             error: function(res) {
-                flash_message(res.responseJSON.error || "Server error!");
+                flash_message(res.responseJSON?.error || "Server error!");
             }
+        });
+    }
+
+    // ****************************************
+    // Helper Functions for Search Results
+    // ****************************************
+
+    // Function to format search results with clickable rows
+    function formatSearchResults(data) {
+        let table = '<table class="table table-striped" cellpadding="10">';
+        table += '<thead><tr>';
+        table += '<th class="col-md-2">User ID</th>';
+        table += '<th class="col-md-2">Item ID</th>';
+        table += '<th class="col-md-4">Description</th>';
+        table += '<th class="col-md-2">Quantity</th>';
+        table += '<th class="col-md-2">Price</th>';
+        table += '</tr></thead><tbody>';
+        
+        // Process the result data based on its structure
+        if (Array.isArray(data)) {
+            // Handle array of items or shopcarts
+            data.forEach((item) => {
+                if (item.items) {
+                    // This is a shopcart with items
+                    item.items.forEach((cartItem) => {
+                        table += formatItemRow(cartItem);
+                    });
+                } else {
+                    // This is a single item
+                    table += formatItemRow(item);
+                }
+            });
+        } else if (data.items) {
+            // Handle single shopcart with items
+            data.items.forEach((item) => {
+                table += formatItemRow(item);
+            });
+        } else {
+            // Handle single item
+            table += formatItemRow(data);
+        }
+        
+        table += '</tbody></table>';
+        return table;
+    }
+
+    // Format a single item row
+    function formatItemRow(item) {
+        return `<tr id="item_${item.item_id}" class="item-row" data-id="${item.item_id}" data-user-id="${item.user_id}">
+            <td>${item.user_id}</td>
+            <td>${item.item_id}</td>
+            <td>${item.description}</td>
+            <td>${item.quantity}</td>
+            <td>${item.price}</td>
+        </tr>`;
+    }
+
+    // Add click handlers to item rows
+    function addItemClickHandlers() {
+        $(".item-row").click(function() {
+            let itemId = $(this).data("id");
+            let userId = $(this).data("user-id");
+            
+            // Get the item details
+            $.ajax({
+                type: "GET",
+                url: `/shopcarts/${userId}/items/${itemId}`,
+                contentType: "application/json",
+                success: function(res) {
+                    update_form_data(res);
+                    flash_message("Item details retrieved!");
+                },
+                error: function(res) {
+                    flash_message(res.responseJSON?.error || "Error retrieving item details");
+                }
+            });
         });
     }
     
