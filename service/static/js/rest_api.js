@@ -269,7 +269,7 @@ $(function () {
         
         let ajax = $.ajax({
             type: "GET",
-            url: `/shopcarts/${user_id}`, // Note: Don't use /api prefix yet
+            url: `/api/shopcarts/${user_id}`, // Add /api prefix
             contentType: "application/json"
         });
         
@@ -306,7 +306,7 @@ $(function () {
         
         let ajax = $.ajax({
             type: "GET",
-            url: `/shopcarts/${user_id}/items`,
+            url: `/api/shopcarts/${user_id}/items`, // Add /api prefix
             contentType: "application/json"
         });
         
@@ -349,7 +349,7 @@ $(function () {
         
         let ajax = $.ajax({
             type: "GET",
-            url: `/shopcarts/${user_id}/items/${item_id}`,
+            url: `/api/shopcarts/${user_id}/items/${item_id}`, // Add /api prefix
             contentType: "application/json"
         });
         
@@ -698,7 +698,7 @@ $(function () {
     function get_item_details(userId, itemId) {
         $.ajax({
             type: "GET",
-            url: `/shopcarts/${userId}/items/${itemId}`,
+            url: `/api/shopcarts/${userId}/items/${itemId}`, // Add /api prefix
             contentType: "application/json",
             success: function(res) {
                 // Fill in the form with item details
@@ -774,7 +774,7 @@ $(function () {
             // Get the item details
             $.ajax({
                 type: "GET",
-                url: `/shopcarts/${userId}/items/${itemId}`,
+                url: `/api/shopcarts/${userId}/items/${itemId}`, // Add /api prefix
                 contentType: "application/json",
                 success: function(res) {
                     update_form_data(res);
