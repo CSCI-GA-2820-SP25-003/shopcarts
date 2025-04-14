@@ -160,7 +160,7 @@ $(function () {
     
         let ajax = $.ajax({
             type: "POST",
-            url: `/api/shopcarts/${user_id}/items`,
+            url: `/shopcarts/${user_id}/items`, // REMOVE /api PREFIX
             contentType: "application/json",
             data: JSON.stringify(data)
         });
@@ -634,12 +634,17 @@ $(function () {
 
     $("#checkout-btn").click(function () {
         let user_id = $("#shopcart_user_id").val();
-    
+        
+        if (!user_id) {
+            flash_message("User ID is required for checkout");
+            return;
+        }
+        
         $("#flash_message").empty();
-    
+        
         let ajax = $.ajax({
-            type: "PUT", 
-            url: `/shopcarts/${user_id}/checkout`, // Ensure no /api prefix
+            type: "POST",
+            url: `/shopcarts/${user_id}/checkout`,
             contentType: "application/json",
         });
     
@@ -657,37 +662,14 @@ $(function () {
     // ****************************************
 
     function display_search_results(res) {
-        let table = '<table class="table table-striped" cellpadding="10">';
-        table += '<thead><tr>';
-        table += '<th class="col-md-2">User ID</th>';
-        table += '<th class="col-md-2">Item ID</th>';
-        table += '<th class="col-md-4">Description</th>';
-        table += '<th class="col-md-2">Quantity</th>';
-        table += '<th class="col-md-2">Price</th>';
-        table += '</tr></thead><tbody>';
-        
-        // Add id attribute to each row for making items clickable
-        res.forEach((cart) => {
-            cart.items.forEach((item) => {
-                table += `<tr id="item_${item.item_id}" class="item-row" data-id="${item.item_id}" data-user-id="${item.user_id}">
-                    <td>${item.user_id}</td>
-                    <td>${item.item_id}</td>
-                    <td>${item.description}</td>
-                    <td>${item.quantity}</td>
-                    <td>${item.price}</td>
-                </tr>`;
-            });
-        });
-        
-        table += '</tbody></table>';
+        // Use the more robust formatSearchResults function instead
+        let table = formatSearchResults(res);
         $("#search_results").html(table);
         
-        // Add click handlers to the rows
-        $(".item-row").click(function() {
-            let itemId = $(this).data("id");
-            let userId = $(this).data("user-id");
-            get_item_details(userId, itemId);
-        });
+        // Add click handlers to rows
+        addItemClickHandlers();
+        
+        flash_message("Search results found!");
     }
 
     // ****************************************
