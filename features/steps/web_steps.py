@@ -193,15 +193,17 @@ def step_impl(context: Any, element_name: str, text_string: str) -> None:
     element.send_keys(text_string)
 
 
-@when('I click on item "{item_id}" in the results')
-def step_impl(context: Any, item_id: str) -> None:
-    """Click on a specific item in the search results"""
-    # Construct the selector for the item - assuming each item has an id
-    # that includes the item_id
-    item_selector = f"item_{item_id}"
-    
-    # Wait for the element to be clickable and then click it
-    element = WebDriverWait(context.driver, context.wait_seconds).until(
-        expected_conditions.element_to_be_clickable((By.ID, item_selector))
-    )
-    element.click()
+@then('the API health status should be "{expected_text}"')
+def step_impl(context, expected_text):
+    element_id = "shopcart_health_status"
+
+    element = context.driver.find_element(By.ID, element_id)
+
+    def text_has_updated(driver):
+        current_text = element.text.strip()
+        return current_text and "Checking" not in current_text
+
+    WebDriverWait(context.driver, context.wait_seconds).until(text_has_updated)
+
+    actual_text = element.text.strip()
+    assert expected_text in actual_text

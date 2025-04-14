@@ -18,7 +18,7 @@
         <div class="table-responsive" id="health_status_div">
             <table class="table">
             <tr>
-                <td>API Health: <span id="health_status">Checking...</span></td>
+                <td>API Health: <span id="shopcart_health_status">Checking...</span></td>
             </tr>
             </table>
         </div>
@@ -69,7 +69,7 @@
               <div class="form-group">
                 <label class="control-label col-sm-2" for="shopcart_item_price">Price:</label>
                 <div class="col-sm-10">
-                  <input type="number" step="0.01" class="form-control" id="shopcart_item_price" placeholder="Enter price">
+                  <input type="text" step="0.01" class="form-control" id="shopcart_item_price" placeholder="Enter price">
                 </div>
               </div>
   
@@ -77,7 +77,7 @@
               <div class="form-group">
                 <label class="control-label col-sm-2" for="shopcart_item_quantity">Quantity:</label>
                 <div class="col-sm-10">
-                  <input type="number" class="form-control" id="shopcart_item_quantity" placeholder="Enter quantity">
+                  <input type="text" class="form-control" id="shopcart_item_quantity" placeholder="Enter quantity">
                 </div>
               </div>
 
@@ -104,15 +104,52 @@
                   <input type="text" readonly class="form-control" id="shopcart_item_created_at" placeholder="Created date will appear here">
                 </div>
               </div>
+
+              <!-- Range & Special Filter Inputs -->
+              <div class="form-group">
+                <label class="control-label col-sm-2" for="shopcart_price_range">Price Range (e.g., 10,50):</label>
+                <div class="col-sm-10">
+                  <input type="text" class="form-control" id="shopcart_price_range" placeholder="Enter price range">
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="control-label col-sm-2" for="shopcart_quantity_range">Quantity Range (e.g., 1,5):</label>
+                <div class="col-sm-10">
+                  <input type="text" class="form-control" id="shopcart_quantity_range" placeholder="Enter quantity range">
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="control-label col-sm-2" for="shopcart_min_price">Min Price:</label>
+                <div class="col-sm-10">
+                  <input type="text" step="0.01" class="form-control" id="shopcart_min_price" placeholder="Enter minimum price">
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="control-label col-sm-2" for="shopcart_max_price">Max Price:</label>
+                <div class="col-sm-10">
+                  <input type="text" step="0.01" class="form-control" id="shopcart_max_price" placeholder="Enter maximum price">
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="control-label col-sm-2" for="shopcart_created_at_range">Created At Range (e.g., 2024-01-01,2024-12-31):</label>
+                <div class="col-sm-10">
+                  <input type="text" class="form-control" id="shopcart_created_at_range" placeholder="Enter created_at range">
+                </div>
+              </div>
+
   
               <!-- SUBMIT BUTTONS -->
               <div class="form-group">
                 <div class="col-sm-offset-2 col-sm-10">
+                  <button type="submit" class="btn btn-primary" id="list-btn">List Shopcarts</button>
                   <button type="submit" class="btn btn-primary" id="search-btn">Search</button>
+                  <button type="submit" class="btn btn-primary" id="search_user-btn">Search User</button>
                   <button type="submit" class="btn btn-primary" id="clear-btn">Clear</button>
                   <button type="submit" class="btn btn-success" id="create-btn">Add to Cart</button>
                   <button type="submit" class="btn btn-success" id="create_item-btn">Add to Cart item</button>
                   <button type="submit" class="btn btn-warning" id="update-btn">Update Item</button>
+                  <button type="submit" class="btn btn-warning" id="checkout-btn">Checkout</button>
+                  <button type="submit" class="btn btn-danger" id="delete_item-btn">Delete Item</button>
                 </div>
               </div>
             </div> <!-- form horizontal -->

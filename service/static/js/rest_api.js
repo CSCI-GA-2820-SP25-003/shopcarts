@@ -16,12 +16,21 @@ $(function () {
 
     /// Clears all form fields
     function clear_form_data() {
+        $("#shopcart_user_id").val("");
         $("#shopcart_item_id").val("");
         $("#shopcart_item_description").val("");
         $("#shopcart_item_price").val("");
         $("#shopcart_item_quantity").val("");
+        $("#shopcart_item_stock").val("");
+        $("#shopcart_item_purchase_limit").val("");
         $("#shopcart_item_created_at").val("");
+        $("#shopcart_price_range").val("");
+        $("#shopcart_quantity_range").val("");
+        $("#shopcart_min_price").val("");
+        $("#shopcart_max_price").val("");
+        $("#shopcart_created_at_range").val("");
     }
+    
 
     // Updates the flash message area
     function flash_message(message) {
@@ -42,18 +51,85 @@ $(function () {
         });
 
         ajax.done(function(res){
-            $("#health_status").html('<span class="text-success">✓ API Online</span>');
+            $("#shopcart_health_status").html('<span class="text-success">✓ API Online</span>');
             console.log("Health check passed: " + JSON.stringify(res));
         });
 
         ajax.fail(function(){
-            $("#health_status").html('<span class="text-danger">✗ API Offline</span>');
+            $("#shopcart_health_status").html('<span class="text-danger">✗ API Offline</span>');
             console.log("Health check failed");
         });
     }
 
     // Check health when page loads
     check_health();
+
+    // ****************************************
+    // List All
+    // ****************************************
+
+    $("#list-btn").click(function () {
+        $("#flash_message").empty();
+    
+        let ajax = $.ajax({
+            type: "GET",
+            url: "/shopcarts",
+            contentType: "application/json",
+            data: ""
+        });
+    
+        ajax.done(function(res){
+            $("#search_results").empty();
+            let table = '<table class="table table-striped">';
+            table += '<thead><tr>';
+            table += '<th class="col-md-1">User ID</th>';
+            table += '<th class="col-md-2">Item ID</th>';
+            table += '<th class="col-md-4">Description</th>';
+            table += '<th class="col-md-2">Price</th>';
+            table += '<th class="col-md-1">Quantity</th>';
+            table += '<th class="col-md-2">Created At</th>';
+            table += '</tr></thead><tbody>';
+
+            // Flatten items from all carts
+            let items = [];
+            for (let cart of res) {
+                for (let item of cart.items) {
+                    items.push(item);
+                }
+            }
+
+            let firstItem = null;
+            for(let i = 0; i < items.length; i++) {
+                let item = items[i];
+                table += `<tr id="row_${i}">
+                    <td>${item.user_id}</td>
+                    <td>${item.item_id}</td>
+                    <td>${item.description}</td>
+                    <td>${item.price.toFixed(2)}</td>
+                    <td>${item.quantity}</td>
+                    <td>${item.created_at}</td>
+                </tr>`;
+                if (i == 0) {
+                    firstItem = item;
+                }
+            }
+            table += '</tbody></table>';
+            $("#search_results").append(table);
+
+            // Copy the first result to the form
+            if (firstItem) {
+                update_form_data(firstItem);
+                flash_message("All shopcarts listed.");
+            } else {
+                flash_message("No items found matching the search criteria.");
+            }
+        });
+    
+        ajax.fail(function(res){
+            flash_message(res.responseJSON?.error || "Server error!");
+        });
+    });
+    
 
     // ****************************************
     // Create / Add Item to Cart
@@ -173,6 +249,43 @@ $(function () {
 
         ajax.fail(function(res){
             flash_message(res.responseJSON.error || "Server error!");
+        });
+    });
+
+    // ****************************************
+    // Delete an Item from Cart
+    // ****************************************
+
+    $("#delete_item-btn").click(function () {
+        let user_id = $("#shopcart_user_id").val();
+        let item_id = $("#shopcart_item_id").val();
+
+        if (!user_id) {
+            flash_message("User ID is required to delete an item.");
+            return;
+        }
+
+        if (!item_id) {
+            flash_message("Item ID is required to delete an item.");
+            return;
+        }
+
+        $("#flash_message").empty();
+
+        let ajax = $.ajax({
+            type: "DELETE",
+            url: `/shopcarts/${user_id}/items/${item_id}`,
+            contentType: "application/json",
+            data: ''
+        });
+
+        ajax.done(function(res){
+            clear_form_data();
+            flash_message("Item has been deleted from the cart!");
+        });
+
+        ajax.fail(function(res){
+            flash_message(res.responseJSON?.error || "Server error!");
         });
     });
 
@@ -323,6 +436,12 @@ $(function () {
         let price = $("#shopcart_item_price").val();
         let quantity = $("#shopcart_item_quantity").val();
 
+        let price_range = $("#shopcart_price_range").val();
+        let quantity_range = $("#shopcart_quantity_range").val();
+        let min_price = $("#shopcart_min_price").val();
+        let max_price = $("#shopcart_max_price").val();
+        let created_at_range = $("#shopcart_created_at_range").val();
+
         let queryString = "";
 
         if (user_id) {
@@ -352,6 +471,47 @@ $(function () {
                 queryString += 'quantity=' + quantity;
             }
         }
+
+        if (price_range) {
+            if (queryString.length > 0) {
+                queryString += '&price_range=' + price_range;
+            } else {
+                queryString += 'price_range=' + price_range;
+            }
+        }
+        
+        if (quantity_range) {
+            if (queryString.length > 0) {
+                queryString += '&quantity_range=' + quantity_range;
+            } else {
+                queryString += 'quantity_range=' + quantity_range;
+            }
+        }
+        
+        if (min_price) {
+            if (queryString.length > 0) {
+                queryString += '&min-price=' + min_price;
+            } else {
+                queryString += 'min-price=' + min_price;
+            }
+        }
+        
+        if (max_price) {
+            if (queryString.length > 0) {
+                queryString += '&max-price=' + max_price;
+            } else {
+                queryString += 'max-price=' + max_price;
+            }
+        }
+        
+        if (created_at_range) {
+            if (queryString.length > 0) {
+                queryString += '&created_at_range=' + created_at_range;
+            } else {
+                queryString += 'created_at_range=' + created_at_range;
+            }
+        }
+        
 
         $("#flash_message").empty();
 
@@ -444,4 +604,181 @@ $(function () {
             flash_message(res.responseJSON.error || "Server error!");
         });
     });
+
+    $("#search_user-btn").click(function () {
+        let user_id = $("#shopcart_user_id").val();
+        let item_id = $("#shopcart_item_id").val();
+        let price = $("#shopcart_item_price").val();
+        let quantity = $("#shopcart_item_quantity").val();
+
+        let price_range = $("#shopcart_price_range").val();
+        let quantity_range = $("#shopcart_quantity_range").val();
+        let min_price = $("#shopcart_min_price").val();
+        let max_price = $("#shopcart_max_price").val();
+        let created_at_range = $("#shopcart_created_at_range").val();
+
+        let queryString = "";
+
+        if (!user_id) {
+            flash_message("User ID is required to search user cart.");
+            return;
+        }
+        
+        if (item_id) {
+            if (queryString.length > 0) {
+                queryString += '&item_id=' + item_id;
+            } else {
+                queryString += 'item_id=' + item_id;
+            }
+        }
+        
+        if (price) {
+            if (queryString.length > 0) {
+                queryString += '&price=' + price;
+            } else {
+                queryString += 'price=' + price;
+            }
+        }
+        
+        if (quantity) {
+            if (queryString.length > 0) {
+                queryString += '&quantity=' + quantity;
+            } else {
+                queryString += 'quantity=' + quantity;
+            }
+        }
+
+        if (price_range) {
+            if (queryString.length > 0) {
+                queryString += '&price_range=' + price_range;
+            } else {
+                queryString += 'price_range=' + price_range;
+            }
+        }
+        
+        if (quantity_range) {
+            if (queryString.length > 0) {
+                queryString += '&quantity_range=' + quantity_range;
+            } else {
+                queryString += 'quantity_range=' + quantity_range;
+            }
+        }
+        
+        if (min_price) {
+            if (queryString.length > 0) {
+                queryString += '&min-price=' + min_price;
+            } else {
+                queryString += 'min-price=' + min_price;
+            }
+        }
+        
+        if (max_price) {
+            if (queryString.length > 0) {
+                queryString += '&max-price=' + max_price;
+            } else {
+                queryString += 'max-price=' + max_price;
+            }
+        }
+        
+        if (created_at_range) {
+            if (queryString.length > 0) {
+                queryString += '&created_at_range=' + created_at_range;
+            } else {
+                queryString += 'created_at_range=' + created_at_range;
+            }
+        }
+        
+
+        $("#flash_message").empty();
+
+        // Default search URL if no queryString
+        let searchUrl = `/shopcarts/${user_id}`;
+        if (queryString.length > 0) {
+            searchUrl += "?" + queryString;
+        }
+
+        let ajax = $.ajax({
+            type: "GET",
+            url: searchUrl,
+            contentType: "application/json",
+            data: ''
+        });
+
+        ajax.done(function(res){
+            $("#search_results").empty();
+            let table = '<table class="table table-striped">';
+            table += '<thead><tr>';
+            table += '<th class="col-md-1">User ID</th>';
+            table += '<th class="col-md-2">Item ID</th>';
+            table += '<th class="col-md-4">Description</th>';
+            table += '<th class="col-md-2">Price</th>';
+            table += '<th class="col-md-1">Quantity</th>';
+            table += '<th class="col-md-2">Created At</th>';
+            table += '</tr></thead><tbody>';
+
+            // Flatten items from all carts
+            let items = [];
+            for (let cart of res) {
+                for (let item of cart.items) {
+                    items.push(item);
+                }
+            }
+
+            let firstItem = null;
+            for(let i = 0; i < items.length; i++) {
+                let item = items[i];
+                table += `<tr id="row_${i}">
+                    <td>${item.user_id}</td>
+                    <td>${item.item_id}</td>
+                    <td>${item.description}</td>
+                    <td>${item.price.toFixed(2)}</td>
+                    <td>${item.quantity}</td>
+                    <td>${item.created_at}</td>
+                </tr>`;
+                if (i == 0) {
+                    firstItem = item;
+                }
+            }
+            table += '</tbody></table>';
+            $("#search_results").append(table);
+
+            // Copy the first result to the form
+            if (firstItem) {
+                update_form_data(firstItem);
+                flash_message("Search results found!");
+            } else {
+                flash_message("No items found matching the search criteria.");
+            }
+        });
+
+        ajax.fail(function(res){
+            flash_message(res.responseJSON.error || "Server error!");
+        });
+    });
+
+    // ****************************************
+    // Checkout for Shopcarts
+    // ****************************************
+
+    $("#checkout-btn").click(function () {
+        let user_id = $("#shopcart_user_id").val();
+    
+        $("#flash_message").empty();
+    
+        let ajax = $.ajax({
+            type: "POST",
+            url: `/shopcarts/${user_id}/checkout`,
+            contentType: "application/json",
+            data: "",
+        });
+    
+        ajax.done(function (res) {
+            flash_message(`${res.message} Total: $${res.total_price.toFixed(2)}`);
+        });
+    
+        ajax.fail(function (res) {
+            flash_message(res.responseJSON?.error || "Server error!");
+        });
+    });
+    
 });

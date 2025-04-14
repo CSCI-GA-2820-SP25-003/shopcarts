@@ -483,9 +483,9 @@ class TestQuery(TestShopcartService):
         """It should filter shopcarts by min-price and max-price, with and without user_id"""
 
         # Create matching and non-matching items
-        self._populate_shopcarts(count=2, user_id=1, price=75.0)  # ✅ Should match
-        self._populate_shopcarts(count=2, user_id=1, price=85.0)  # ❌ Too high
-        self._populate_shopcarts(count=2, user_id=1, price=65.0)  # ❌ Too low
+        self._populate_shopcarts(count=2, user_id=1, price=75.0)
+        self._populate_shopcarts(count=2, user_id=1, price=85.0)
+        self._populate_shopcarts(count=2, user_id=1, price=65.0)
 
         # Test: /shopcarts/1 (with user_id)
         resp = self.client.get("/shopcarts/1?min-price=70&max-price=80")
