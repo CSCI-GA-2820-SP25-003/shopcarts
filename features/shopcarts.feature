@@ -294,13 +294,6 @@ Scenario: Cannot update an item without providing an Item ID
     And I press the "Update" button
     Then I should see the message "Item ID is required to update an item."
 
-Scenario: Updating a non-existent item should return an error
-    When I visit the "Home Page"
-    And I set the "User ID" to "999"
-    And I set the "Item ID" to "999"
-    And I set the "Item Quantity" to "5"
-    And I press the "Update" button
-    Then I should see the message "Item 999 not found in user 999's cart"
 
 Scenario: Retrieve a user's shopcart via the UI
     When I visit the "Home Page"

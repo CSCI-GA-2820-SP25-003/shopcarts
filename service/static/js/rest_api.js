@@ -241,7 +241,16 @@ $(function () {
         let data = {
             "quantity": parseInt(quantity)
         };
-
+        
+        if (!user_id) {
+            flash_message("User ID is required to update an item.");
+            return;
+        }
+        if (!item_id) {
+            flash_message("Item ID is required to update an item.");
+            return;
+        }
+        
         $("#flash_message").empty();
 
         let ajax = $.ajax({
