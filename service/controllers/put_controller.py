@@ -80,7 +80,6 @@ def update_cart_item_controller(user_id, item_id):
     try:
         cart_item.update()
     except ValueError as e:
-        # response_body = {"error": str(e)}
-        # return response_body, status.HTTP_400_BAD_REQUEST
-        return jsonify({"error": str(e)}), status.HTTP_400_BAD_REQUEST
+        response_body = {"error": str(e)}
+        return response_body, status.HTTP_400_BAD_REQUEST
     return cart_item.serialize(), status.HTTP_200_OK

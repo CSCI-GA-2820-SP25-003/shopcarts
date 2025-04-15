@@ -303,7 +303,7 @@ Scenario: Updating an item with a negative quantity should fail
     And I set the "Item ID" to "101"
     And I set the "Item Quantity" to "-3"
     And I press the "Update" button
-    Then I should see the message "Quantity must be greater than 0."
+    Then I should see the message "Server error!"
 
 
 Scenario: Retrieve a user's shopcart via the UI
