@@ -294,6 +294,17 @@ Scenario: Cannot update an item without providing an Item ID
     And I press the "Update" button
     Then I should see the message "Item ID is required to update an item."
 
+Scenario: Updating an item with a negative quantity should fail
+    Given the following shopcart items
+      | user_id | item_id | description   | price | quantity |
+      | 1       | 101     | Deluxe Widget | 19.99 | 2        |
+    When I visit the "Home Page"
+    And I set the "User ID" to "1"
+    And I set the "Item ID" to "101"
+    And I set the "Item Quantity" to "-3"
+    And I press the "Update" button
+    Then I should see the message "Quantity must be greater than 0."
+
 
 Scenario: Retrieve a user's shopcart via the UI
     When I visit the "Home Page"
