@@ -273,7 +273,7 @@ Scenario: Update the quantity of an item in the user's cart via the UI
     When I visit the "Home Page"
     And I set the "User ID" to "1"
     And I set the "Item ID" to "101"
-    And I set the "Quantity" to "5"
+    And I set the "Item Quantity" to "5"
     And I press the "Update" button
     Then I should see the message "Item updated successfully!"
     When I set the "User ID" to "1"
