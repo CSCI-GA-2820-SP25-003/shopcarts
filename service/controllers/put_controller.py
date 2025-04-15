@@ -2,7 +2,7 @@
 PUT Controller logic for Shopcart Service
 """
 
-from flask import request, jsonify
+from flask import request
 from flask import current_app as app
 from service.common import status
 from service.models import Shopcart
