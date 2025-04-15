@@ -152,17 +152,29 @@ def step_impl(context: Any, name: str) -> None:
     assert name not in element.text
 
 
+# @then('I should see the message "{message}"')
+# def step_impl(context: Any, message: str) -> None:
+#     # Uncomment next line to take a screenshot of the web page for debugging
+#     # save_screenshot(context, message)
+#     found = WebDriverWait(context.driver, context.wait_seconds).until(
+#         expected_conditions.text_to_be_present_in_element(
+#             (By.ID, "flash_message"), message
+#         )
+#     )
+#     assert found
 @then('I should see the message "{message}"')
 def step_impl(context: Any, message: str) -> None:
-    # Uncomment next line to take a screenshot of the web page for debugging
-    # save_screenshot(context, message)
-    found = WebDriverWait(context.driver, context.wait_seconds).until(
-        expected_conditions.text_to_be_present_in_element(
-            (By.ID, "flash_message"), message
-        )
+    WebDriverWait(context.driver, context.wait_seconds).until(
+        expected_conditions.presence_of_element_located((By.ID, "flash_message"))
     )
-    assert found
 
+    element = context.driver.find_element(By.ID, "flash_message")
+    actual_message = element.text.strip()
+
+    print(f"[DEBUG] Expected: '{message}'")
+    print(f"[DEBUG] Actual  : '{actual_message}'")
+
+    assert message in actual_message
 
 ##################################################################
 # This code works because of the following naming convention:
@@ -207,3 +219,21 @@ def step_impl(context, expected_text):
 
     actual_text = element.text.strip()
     assert expected_text in actual_text
+
+
+@when('I click on item "{item_name}" in the results')
+def step_impl(context: Any, item_name: str) -> None:
+    # Find the table row containing the item name
+    elements = context.driver.find_elements(By.XPATH, 
+                                            f"//div[@id='search_results']//tr[contains(., '{item_name}')]")
+    assert len(elements) > 0, f"Item '{item_name}' not found in results table"
+    
+    # Click on the first matching row
+    elements[0].click()
+    
+    # Wait for the form to be populated
+    WebDriverWait(context.driver, context.wait_seconds).until(
+        expected_conditions.text_to_be_present_in_element_value(
+            (By.ID, ID_PREFIX + "item_description"), item_name
+        )
+    )

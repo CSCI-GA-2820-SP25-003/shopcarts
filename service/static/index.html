@@ -7,6 +7,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" type="image/x-icon" href="static/images/newapp-icon.png">
     <link rel="stylesheet" href="static/css/cerulean_bootstrap.min.css">
+    <style>
+        #search_results tbody tr {
+            cursor: pointer;
+        }
+        #search_results tbody tr:hover {
+            background-color: #f5f5f5;
+        }
+        #search_results tbody tr.info {
+            background-color: #d9edf7;
+        }
+        .selected-row {
+            background-color: #d9edf7 !important;
+        }
+    </style>
   </head>
   <body>
     <div class="container">
@@ -150,6 +164,8 @@
                   <button type="submit" class="btn btn-warning" id="update-btn">Update Item</button>
                   <button type="submit" class="btn btn-warning" id="checkout-btn">Checkout</button>
                   <button type="submit" class="btn btn-danger" id="delete_item-btn">Delete Item</button>
+                  <button type="submit" class="btn btn-info" id="get_items-btn">Get Items</button>
+                  <button type="submit" class="btn btn-info" id="get_item-btn">Get Item</button>
                 </div>
               </div>
             </div> <!-- form horizontal -->
