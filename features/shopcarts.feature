@@ -268,3 +268,14 @@ Scenario: Return error for invalid min-price
     And I set the "Max Price" to "expensive"
     And I press the "Search User" button
     Then I should see the message "Server error!"
+
+Scenario: Update the quantity of an item in the user's cart via the UI
+    When I visit the "Home Page"
+    And I set the "User ID" to "1"
+    And I set the "Item ID" to "101"
+    And I set the "Quantity" to "5"
+    And I press the "Update" button
+    Then I should see the message "Item updated successfully!"
+    When I set the "User ID" to "1"
+    And I press the "Retrieve" button
+    Then I should see "5" in the results
