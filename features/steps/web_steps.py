@@ -207,3 +207,21 @@ def step_impl(context, expected_text):
 
     actual_text = element.text.strip()
     assert expected_text in actual_text
+
+
+@when('I click on item "{item_name}" in the results')
+def step_impl(context: Any, item_name: str) -> None:
+    # Find the table row containing the item name
+    elements = context.driver.find_elements(By.XPATH, 
+                                            f"//div[@id='search_results']//tr[contains(., '{item_name}')]")
+    assert len(elements) > 0, f"Item '{item_name}' not found in results table"
+    
+    # Click on the first matching row
+    elements[0].click()
+    
+    # Wait for the form to be populated
+    WebDriverWait(context.driver, context.wait_seconds).until(
+        expected_conditions.text_to_be_present_in_element_value(
+            (By.ID, ID_PREFIX + "item_description"), item_name
+        )
+    )

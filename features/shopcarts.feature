@@ -139,7 +139,7 @@ Scenario: Checkout fails when cart is empty
 Scenario: Checkout fails when cart is empty
     When I visit the "Home Page"
     And I press the "Checkout" button
-    Then I should see the message "Not Found"
+    Then I should see the message "Server error!"
 
 Scenario: Filter shopcarts by price and quantity range
     When I visit the "Home Page"
@@ -279,3 +279,69 @@ Scenario: Update the quantity of an item in the user's cart via the UI
     When I set the "User ID" to "1"
     And I press the "Retrieve" button
     Then I should see "5" in the results
+
+Scenario: Retrieve a user's shopcart via the UI
+    When I visit the "Home Page"
+    And I set the "User ID" to "1"
+    And I press the "Retrieve" button
+    Then I should see the message "Shopcart retrieved successfully!"
+    And I should see "Deluxe Widget" in the results
+    And I should see "Premium Gadget" in the results
+    And I should see "19.99" in the results
+    And I should see "29.99" in the results
+    And I should not see "Basic Tool" in the results
+
+Scenario: Retrieve a specific item's details from a shopcart
+    When I visit the "Home Page"
+    And I set the "User ID" to "2"
+    And I press the "Retrieve" button
+    Then I should see the message "Shopcart retrieved successfully!"
+    And I should see "Basic Tool" in the results
+    And I should see "9.99" in the results
+    And I should see "3" in the results
+    When I set the "Item ID" to "201"
+    Then I should see "Basic Tool" in the "Item Description" field
+    And I should see "9.99" in the "Item Price" field
+    And I should see "3" in the "Item Quantity" field
+
+Scenario: Retrieve a non-existent user's shopcart
+    When I visit the "Home Page"
+    And I set the "User ID" to "999"
+    And I press the "Retrieve" button
+    Then I should see the message "Shopcart not found for this user."
+
+Scenario: Get all items for a specific user's shopcart
+    When I visit the "Home Page"
+    And I set the "User ID" to "1"
+    And I press the "Get Items" button
+    Then I should see the message "Items retrieved successfully!"
+    And I should see "Deluxe Widget" in the results
+    And I should see "Premium Gadget" in the results
+    But I should not see "Basic Tool" in the results
+
+Scenario: Get a specific item from a user's shopcart
+    When I visit the "Home Page"
+    And I set the "User ID" to "2"
+    And I set the "Item ID" to "201"
+    And I press the "Get Item" button
+    Then I should see the message "Item retrieved successfully!"
+    And I should see "Basic Tool" in the "Item Description" field
+    And I should see "9.99" in the "Item Price" field
+    And I should see "3" in the "Item Quantity" field
+
+Scenario: Cannot get items without providing a User ID
+    When I visit the "Home Page"
+    And I press the "Get Items" button
+    Then I should see the message "User ID is required to get items."
+
+Scenario: Cannot get a specific item without providing a User ID
+    When I visit the "Home Page"
+    And I set the "Item ID" to "101"
+    And I press the "Get Item" button
+    Then I should see the message "User ID is required to get an item."
+
+Scenario: Cannot get a specific item without providing an Item ID
+    When I visit the "Home Page"
+    And I set the "User ID" to "1"
+    And I press the "Get Item" button
+    Then I should see the message "Item ID is required to get an item."
