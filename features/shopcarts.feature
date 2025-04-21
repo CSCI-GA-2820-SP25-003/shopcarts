@@ -44,7 +44,7 @@ Scenario: Adding to cart fails when quantity is 0
     And I set the "Item Price" to "12.99"
     And I set the "Item Quantity" to "0"
     And I press the "Create" button
-    Then I should see the message "Server error!"
+    Then I should see the message "Quantity must be greater than 0."
 
 Scenario: Add an item product to a user's cart via the UI
     When I visit the "Home Page"
@@ -70,7 +70,7 @@ Scenario: Add an item product fails due to exceeding purchase limit
     And I set the "Item Stock" to "100"
     And I set the "Item Purchase Limit" to "2"
     And I press the "Create Item" button
-    Then I should see the message "Server error!"
+    Then I should see the message "Cannot exceed purchase limit of 2"
 
 Scenario: List all shopcarts from the UI
     When I visit the "Home Page"
@@ -202,7 +202,7 @@ Scenario: Return error for invalid price_range format
     When I visit the "Home Page"
     And I set the "Price Range" to "40"
     And I press the "Search" button
-    Then I should see the message "Server error!"
+    Then I should see the message "Invalid range format for price_range: expected start,end"
 
 Scenario: Return error for using both price and min-price
     When I visit the "Home Page"
@@ -210,13 +210,13 @@ Scenario: Return error for using both price and min-price
     And I set the "Item Price" to "~gte~40"
     And I set the "Min Price" to "30"
     And I press the "Search" button
-    Then I should see the message "Server error!"
+    Then I should see the message "Error in price filters: Cannot use both 'price' or 'price_range' and 'min-price'/'max-price' in the same request."
 
 Scenario: Return error for invalid min-price
     When I visit the "Home Page"
     And I set the "Min Price" to "cheap"
     And I press the "Search" button
-    Then I should see the message "Server error!"
+    Then I should see the message "Invalid value for price: cheap"
 
 Scenario: Filter shopcarts by created_at range
     When I visit the "Home Page"
@@ -267,7 +267,7 @@ Scenario: Return error for invalid min-price
     And I set the "User Id" to "1"
     And I set the "Max Price" to "expensive"
     And I press the "Search User" button
-    Then I should see the message "Server error!"
+    Then I should see the message "Invalid value for price: expensive"
 
 Scenario: Update the quantity of an item in the user's cart via the UI
     When I visit the "Home Page"
@@ -303,7 +303,7 @@ Scenario: Updating an item with a negative quantity should fail
     And I set the "Item ID" to "101"
     And I set the "Item Quantity" to "-3"
     And I press the "Update" button
-    Then I should see the message "Server error!"
+    Then I should see the message "Quantity must be greater than 0."
 
 
 Scenario: Retrieve a user's shopcart via the UI

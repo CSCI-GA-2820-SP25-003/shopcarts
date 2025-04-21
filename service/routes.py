@@ -236,7 +236,6 @@ class ShopcartsCollection(Resource):
 
     @api.doc("list_shopcarts")
     @api.expect(shopcart_args, validate=False)
-    @api.marshal_list_with(shopcart_model)
     def get(self):
         """Lists all shopcarts grouped by user"""
         app.logger.info("Request to list all shopcarts")
@@ -252,7 +251,6 @@ class ShopcartsResource(Resource):
     @api.response(200, "Success")
     @api.response(404, "Shopcart not found")
     @api.response(500, "Internal Server Error")
-    @api.marshal_with(shopcart_model)
     def get(self, user_id):
         """Gets the shopcart for a specific user id"""
         app.logger.info("Request to get shopcart for user_id: '%s'", user_id)
@@ -274,7 +272,6 @@ class ShopcartsResource(Resource):
             },
         )
     )
-    @api.marshal_list_with(shopcart_item_model, code=201)
     @api.response(201, "Item created successfully")
     @api.response(400, "Invalid input")
     @api.response(500, "Internal Server Error")
@@ -319,7 +316,6 @@ class ShopcartsResource(Resource):
     @api.response(200, "Shopcart updated successfully")
     @api.response(400, "Invalid input")
     @api.response(404, "Shopcart or item not found")
-    @api.marshal_list_with(shopcart_item_model)
     def put(self, user_id):
         """Update an existing shopcart"""
         app.logger.info("Request to update shopcart for user_id: '%s'", user_id)
@@ -340,7 +336,6 @@ class ShopcartItemsCollection(Resource):
     @api.response(200, "Success")
     @api.response(404, "User not found")
     @api.response(500, "Internal Server Error")
-    @api.marshal_with(shopcart_items_without_timestamps_model)
     def get(self, user_id):
         """Gets all items in a specific user's shopcart"""
         app.logger.info("Request to get all items for user_id: '%s'", user_id)
@@ -371,7 +366,6 @@ class ShopcartItemsCollection(Resource):
     @api.response(201, "Item successfully added")
     @api.response(400, "Invalid input")
     @api.response(500, "Internal Server Error")
-    @api.marshal_list_with(shopcart_item_model, code=201)
     def post(self, user_id):
         """Add a product to a user's shopping cart or update quantity if it already exists."""
         app.logger.info("Request to add product to cart for user_id: '%s'", user_id)
@@ -395,7 +389,6 @@ class ShopcartItemsResource(Resource):
     @api.response(200, "Success")
     @api.response(404, "User or item not found")
     @api.response(500, "Internal Server Error")
-    @api.marshal_with(shopcart_item_model)
     def get(self, user_id, item_id):
         """Gets a specific item from a user's shopcart"""
         app.logger.info("Request to get item %s for user_id: %s", item_id, user_id)
@@ -415,7 +408,6 @@ class ShopcartItemsResource(Resource):
     @api.response(200, "Item updated")
     @api.response(400, "Invalid input")
     @api.response(404, "Item not found")
-    @api.marshal_with(shopcart_item_model)
     def put(self, user_id, item_id):
         """Update a specific item in a user's shopping cart"""
         app.logger.info("Request to update item %s for user_id: %s", item_id, user_id)
