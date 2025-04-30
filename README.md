@@ -168,6 +168,9 @@ kubectl apply -f k8s/postgres/stateful-set.yaml
 kubectl apply -f k8s/postgres/pvc.yaml
 kubectl apply -f k8s/postgres/service.yaml
 
+# The following can also work
+kubectl apply -f k8s/postgres/
+
 kubectl apply -f k8s/deployment.yaml
 kubectl apply -f k8s/service.yaml
 kubectl apply -f k8s/ingress.yaml
